@@ -31,6 +31,6 @@ Then just implement the data into your source code and you're good to go!
   - 8x8
   - 8x16
 - RLE compression option
-- Backgrounds that are smaller than 256x192 (Like for cinematic cutscenes)
+- Support for backgrounds that are smaller than 256x192 (Like for cinematic cutscenes)
 
 
