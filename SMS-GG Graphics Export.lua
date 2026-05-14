@@ -59,7 +59,7 @@ img:drawSprite(sprite, frame)
 ----------------------------------------------------------------------------------------
 --Helper Functions
 ----------------------------------------------------------------------------------
---Convert our 32-bit Aseprite color into SGB 15-bit color
+--Convert our 32-bit Aseprite color into GG 12-bit color
 local function convert32BitTo12BitColor(color)
 	--Isolate the 32-bit components of the color
 	local hexR = color.red
@@ -81,7 +81,7 @@ local function convert32BitTo12BitColor(color)
 	return gg12BitColor
 end
 
---Convert our 32-bit Aseprite color into SGB 6-bit color
+--Convert our 32-bit Aseprite color into SMS 6-bit color
 local function convert32BitTo6BitColor(color)
 	--Isolate the 32-bit components of the color
 	local hexR = color.red
@@ -133,6 +133,7 @@ local function writePaletteToIncFile(file, systemType)
     paletteFile:write("; End of ".. systemType .. " Palette")
     paletteFile:close();
 end
+
 
 
 ----------------------------------------------------------------------------------------
@@ -442,11 +443,6 @@ local function recordTiles(currentX, currentY, numTiles, tilePatternTable, tileP
 
             end                  
             
-            --tileMapTable[tilePattern] = ("$" .. string.format("%02X", #tilePatternTable - 1) )
-            --[[         else
-            -- And save the Tile Pattern to the map
-            tileMapTable[tilePattern] = ("$" .. string.format("%02X", tileMapNumber) )
-        end ]]
     end
 end
 
@@ -489,7 +485,6 @@ local function writeTilePatternToIncFile(file, tilePatternData, system)
     tileIncFile:close();
 
 end
-
 
 -- Function to write the Tile Pattern Data to inc files for use in SG-100/MSX projects
 local function writeTileMapToIncFile(file, tileMapTable, system)
@@ -603,10 +598,6 @@ local function exportBackground()
         --Save the palette file
         writePaletteToIncFile(data.paletteFile, data.systemType)
 
-        -- Write to file
-        --writeTilePatternToIncFile(data.tileFile, tilePatternTable0, tilePatternTable1, tilePatternTable2)
-        --writeTileMapToIncFile(data.mapFile, tileMapTable0, tileMapTable1, tileMapTable2)
-        --writeColorMapToIncFile(data.colorFile, colorMapTable0, colorMapTable1, colorMapTable2)
     end
 end
 
@@ -616,25 +607,204 @@ end
 --Sprite
 ----------------------------------------------------------------------------------
 
-
--- Write sprite tiles to a file
-local function writeSpriteTiles(tileFile, tilePatternData)
-     local tilePatternIncFile = io.open(tileFile, "w")
-    -- Header comment message
-    tilePatternIncFile:write("; Tile Pattern file for use with sprites on SMS Z80 Assembly programs\n; By Steelfinger Studios\n \n")
-    -- Write the Tile Patterns
-    for tile = 1, #tilePatternData, 1 do
-        -- Beginning of the first row of tiles
-        tilePatternIncFile:write("; Sprite Pattern #" .. tile - 1)
-        tilePatternIncFile:write("\n")
-        tilePatternIncFile:write(".DB ")
-        -- Each tile is made of 8 bytes
-        for rowByte = 1, #tilePatternData[tile], 1 do
-            tilePatternIncFile:write(tilePatternData[tile][rowByte].." ")
-        end
-        tilePatternIncFile:write("\n")
+-- Function for getting our tile data etc
+local function recordSpriteTiles(currentX, currentY, numTiles, tilePatternTable, spriteSize)
+    -- We need to go through However many tiles
+    local tileCount = numTiles
+    local tileWidth = 8
+    local tileHeight = 8
+    if spriteSize == "8x16 Pixels" then
+        tileHeight = 16
+        tileCount = numTiles / 2
     end
-    tilePatternIncFile:close();
+    local spriteWidth = sprite.width / 8
+    
+    local origX = currentX
+    local origY = currentY
+    local pixelColor = 0
+    local newRow = false
+    
+    
+
+    -- Go through all tiles
+    for tilePattern = 1, tileCount, 1 do
+        -- Set our baseline X and Y
+        origX = currentX
+        origY = currentY
+        local tileBuffer = {}
+        local tileCount = 1
+        -- Point tile pattern to next tile
+        local tilePatternBuffer = {}
+        
+        
+
+        -- Go down 8 pixels in a single tile
+        for tilePatternRow = 1, tileHeight, 1 do
+            local tilePatternRowColorData = {}
+            local rowByte = 1
+            -- The 32 bytes for our tile
+            local rowDataByte0 = 0x00
+            local rowDataByte1 = 0x00
+            local rowDataByte2 = 0x00
+            local rowDataByte3 = 0x00
+
+            local shiftCounter = 4
+            local shifSwap = 1
+            local targetBit = 0x80
+            -- Go across 8 pixels in a single tile
+            for tilePatternPixel = 1, tileWidth, 1 do
+                local bitCheck = 0x00
+
+                
+                
+                --print(pixelIndexColor)
+                -- First 4 bits
+                -- Grab the index color of the first pixel in the byte
+                local pixelIndexColor = img:getPixel(currentX, currentY)
+                -- Move over to the target bit
+                pixelIndexColor = pixelIndexColor << shiftCounter
+                bitCheck = targetBit & pixelIndexColor
+                -- Record bit into byte 3
+                rowDataByte3 = rowDataByte3 | bitCheck
+                --print(bitCheck)
+
+                --Move next bit into target bit
+                pixelIndexColor = img:getPixel(currentX, currentY)
+                pixelIndexColor = pixelIndexColor << shiftCounter + 1
+                bitCheck = targetBit & pixelIndexColor
+                -- Record bit into byte 3
+                rowDataByte2 = rowDataByte2 | bitCheck
+                --print(bitCheck)
+
+                --Move next bit into target bit
+                pixelIndexColor = img:getPixel(currentX, currentY)
+                pixelIndexColor = pixelIndexColor << shiftCounter + 2
+                bitCheck = targetBit & pixelIndexColor
+                -- Record bit into byte 3
+                rowDataByte1 = rowDataByte1 | bitCheck
+                --print(bitCheck)
+
+                --Move next bit into target bit
+                pixelIndexColor = img:getPixel(currentX, currentY)
+                pixelIndexColor = pixelIndexColor << shiftCounter + 3
+                bitCheck = targetBit & pixelIndexColor
+                -- Record bit into byte 3
+                rowDataByte0 = rowDataByte0 | bitCheck
+                --print(bitCheck)
+                
+                -- Wow I hate doing bit manipulation in Lua
+
+                -- Save our Two Pixel Bytes to the table
+                tileBuffer[tileCount + 0] = ("$" .. string.format("%02X", rowDataByte0) )
+                tileBuffer[tileCount + 1] = ("$" .. string.format("%02X", rowDataByte1) )
+                tileBuffer[tileCount + 2] = ("$" .. string.format("%02X", rowDataByte2) )
+                tileBuffer[tileCount + 3] = ("$" .. string.format("%02X", rowDataByte3) )
+
+                -- Prepare to check next row
+                currentX = currentX + 1
+                shiftCounter = shiftCounter - 1
+                if shiftCounter < 0 then
+                    shiftSwap = -1
+                end
+                targetBit = targetBit / 2
+
+            end
+            -- Increament our tile count. Each tile uses 4 bytes, thus +4
+            tileCount = tileCount + 4
+
+            -- When we are out of the tile pattern pixel loop, then we've finished a row within a tile
+            if tilePattern % 32 == 0 then
+                currentX = origX
+                newRow = true
+            else
+                currentX = origX
+                newRow = false
+            end
+            -- Update our Y
+            currentY = currentY + 1
+
+        end
+        -- When we finish the Tile Height loop, then we are finished with the tile
+        -- Prepare for next tile
+        -- If we are at the last tile in a row, then make sure to move to the next row
+        
+        if tilePattern % spriteWidth == 0 then
+                newRow = true
+        end
+        if newRow == true then
+            currentY = origY + tileHeight
+            currentX = 0 
+            origX = currentX
+            origY = currentY
+            newRow = false                  -- Make sure to reset
+        else
+            currentY = origY
+            currentX = origX + tileWidth
+        end
+            
+
+        tilePatternTable[#tilePatternTable + 1] = tileBuffer                   
+             
+            
+    end
+end
+
+
+-- Function to write the Tile Pattern Data to inc files for use in SG-100/MSX projects
+local function writeSpriteTilePatternToIncFile(file, tilePatternData, system, spriteSize)
+    
+    local tileIncFile = io.open(file, "w")  
+    local byteCount = 1
+    
+    -- Header comment message
+    tileIncFile:write("; Tile Pattern file for use with " .. system .. " Z80 Assembly programs\n; By Steelfinger Studios\n")
+    -- Write the pattern data
+    local totalNumTiles = 0
+    if #tilePatternData > 448 then
+       totalNumTiles = 448
+    else
+        totalNumTiles = #tilePatternData
+    end
+
+    local spriteSizeBytes = tileSize
+    if spriteSize == "8x16 Pixels" then
+        spriteSizeBytes = 64
+    end
+
+    local tileNum = 0
+
+    for tile = 1, totalNumTiles, 1 do
+        -- Beginning of the first row of tiles
+        tileIncFile:write("; Sprite Tile Pattern #" .. tileNum)
+        tileIncFile:write("\n")
+        tileIncFile:write(".DB ")
+        tileNum = tileNum + 1
+        
+        -- Each tile is made of 32 bytes
+        for tileBytes = 1, spriteSizeBytes, 1 do
+            --print(tilePatternData[byteCount])
+            tileIncFile:write(tilePatternData[tile][tileBytes].." ")
+            byteCount = byteCount + 1
+            
+            if tileBytes % 4 == 0 and tileBytes == spriteSizeBytes / 2 and spriteSizeBytes == 64 then
+                tileIncFile:write("\n")
+                tileIncFile:write("; Sprite Tile Pattern #" .. tileNum)
+                tileIncFile:write("\n")
+                tileIncFile:write(".DB ")
+                tileNum = tileNum + 1
+            elseif tileBytes % 4 == 0 and tileBytes ~= spriteSizeBytes then
+                tileIncFile:write("\n")
+                tileIncFile:write(".DB ")
+            end
+            
+
+        end
+        tileIncFile:write(" \n")
+    end
+    
+    tileIncFile:write("; End of file\n")
+    tileIncFile:close();
+
 end
 
 
@@ -665,14 +835,14 @@ local function exportSprite()
             title="SMS-GG Export",
             open=false,
             save=true,
-            filename= spriteFilePath .. "Tiles.inc",
+            filename= spriteFilePath .. "SpriteTiles.inc",
             filetypes={"inc"}}
     dlg:file{ id="paletteFile",
             label="Palette-File",
             title="SMS-GG Export",
             open=false,
             save=true,
-            filename= spriteFilePath .. "Pal.inc",
+            filename= spriteFilePath .. "SpritePal.inc",
             filetypes={"inc"}}
     
     dlg:button{ id="ok", text="OK" }
@@ -687,13 +857,15 @@ local function exportSprite()
         local x = 0
         local y = 0
 
+        recordSpriteTiles(x, y, numTiles, tilePatternTable, data.spriteSize)
+        -- Save the tiles to a file
+        -- Write to file
+        writeSpriteTilePatternToIncFile(data.tileFile, tilePatternTable, data.systemType, data.spriteSize)
+
         --Save the palette file
         writePaletteToIncFile(data.paletteFile, data.systemType)
-        
-        -- First 256 tiles
-        --recordSpriteTiles(x, y, numTiles, tilePatternTable, data.bigSprites )
 
-        --writeSpriteTiles(data.tileFile, tilePatternTable)
+
     end
 end
 
