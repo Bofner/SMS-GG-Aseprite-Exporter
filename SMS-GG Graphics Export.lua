@@ -568,7 +568,7 @@ local function exportBackground()
             filetypes={"inc"}}
     
 
-    dlg:button{ id="ok", text="OK" }
+    dlg:button{ id="ok", text="OK", focus = true  }
     dlg:button{ id="cancel", text="Cancel" }
     dlg:show()
     local data = dlg.data
@@ -845,8 +845,8 @@ local function exportSprite()
             filename= spriteFilePath .. "SpritePal.inc",
             filetypes={"inc"}}
     
-    dlg:button{ id="ok", text="OK" }
-    dlg:button{ id="cancel", text="Cancel" }
+    dlg:button{ id="ok", text="OK", focus = true   }
+    dlg:button{ id="cancel", text="Cancel"}
     dlg:show()
     local data = dlg.data
 
@@ -887,9 +887,10 @@ end
 ----------------------------------------------------------------------------------
 
 local dlg = Dialog()
-dlg:button{ id="background", text="Export Background" }
-dlg:button{ id="sprite", text="Export Sprite" }
-dlg:button{ id="cancel", text="Cancel" }
+
+dlg:button{ id="background", text="Export Background", focus = false }
+dlg:button{ id="sprite", text="Export Sprite", focus = false  }
+dlg:button{ id="cancel", text="Cancel", focus = true }
 dlg:show()
 local data = dlg.data
 if data.background then
