@@ -2,7 +2,7 @@
 
 Convert your Aseprite drawings to data that a real Sega Master System or Sega Game Gear can read and display!
 
-Supports background (and sprites in the future) graphics with any custom 16-color SMS or GG palettes. Colors that fall outside of the range of the SMS or GG will be cut to fit the bit-depth of the target system. 
+Supports background and sprite graphics with any custom 16-color SMS or GG palettes. Colors that fall outside of the range of the SMS or GG will be cut to fit the bit-depth of the target system. 
 
 Exports 3 file types:
 
@@ -16,11 +16,19 @@ Exports 3 file types:
 
 Make sure your drawing is set to index color mode, and doesn't exceed 16 colors. 
 
+![](https://github.com/Bofner/SMS-GG-Aseprite-Exporter/blob/main/img/1.png)
+
 Select the SMS-GG Exporter from the scripts drop-down
 
-Select the type of data you want to export (sprite support will be added in a future update)
+![](https://github.com/Bofner/SMS-GG-Aseprite-Exporter/blob/main/img/2.png)
+
+Select the type of data you want to export 
+
+![](https://github.com/Bofner/SMS-GG-Aseprite-Exporter/blob/main/img/3.png)
 
 Select a target system (SMS or GG), an offset for where in VRAM your tile will be stored (default is 0), and where you want your files to be exported
+
+![](https://github.com/Bofner/SMS-GG-Aseprite-Exporter/blob/main/img/4.png)
 
 Then just implement the data into your source code and you're good to go!
 
