@@ -41,7 +41,8 @@ Then just implement the data into your source code and you're good to go!
 - ~~Sprite support~~
   - ~~8x8~~
   - ~~8x16~~
-- RLE compression option
+- Compression option
 - Support for backgrounds that are smaller than 256x192 (Like for cinematic cutscenes)
+- Background software bit enabling via slices
 
 
