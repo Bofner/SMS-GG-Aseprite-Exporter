@@ -16,6 +16,10 @@ local repeatVertTile = 0x0400
 local repeatHVTile = 0x0600
 local newTile = 0x0001
 
+--Slices to be used for software bits
+local slices = sprite.slices
+local softwareBitAreas = {}
+
 
 --Palette Constants
 local currentPal = Palette(sprite.palettes[1])
@@ -302,10 +306,65 @@ local function recordTiles(currentX, currentY, numTiles, tilePatternTable, tileP
     local origY = currentY
     local pixelColor = 0
     local newRow = false
+
+    -- User determines the palette used for each ATR
+for i = 1, #slices, 1 do
+	if slices[i] ~= nil then
+		-- Adjust size of the slice in order to accomodate BG tiles
+		local tiledRect = slices[i].bounds
+		--X
+		if tiledRect.x % 8 > 4 then
+			tiledRect.width = tiledRect.width - (8 - tiledRect.x % 8)
+			tiledRect.x = tiledRect.x + (8 - tiledRect.x % 8)
+		else
+			tiledRect.width = tiledRect.width + (tiledRect.x % 8)
+			tiledRect.x = tiledRect.x - tiledRect.x % 8
+		end
+		--Y
+		if tiledRect.y % 8 > 4 then
+			tiledRect.height = tiledRect.height - (8 - tiledRect.y % 8)
+			tiledRect.y = tiledRect.y + (8 - tiledRect.y % 8)
+		else
+			tiledRect.height = tiledRect.height + (tiledRect.y % 8)
+			tiledRect.y = tiledRect.y - tiledRect.y % 8
+		end
+		--WIDTH
+		if tiledRect.width % 8 > 4 then
+			tiledRect.width = tiledRect.width + (8 - (tiledRect.width) % 8)
+		else
+			tiledRect.width = tiledRect.width - tiledRect.width % 8
+		end
+		--HEIGHT
+		if tiledRect.height % 8 > 4 then
+			tiledRect.height = tiledRect.height + (8 - (tiledRect.height) % 8)
+		else
+			tiledRect.height = tiledRect.height - tiledRect.height % 8
+		end
+        -- We've got our adjusted rectangle, so now we need to figure out which 
+        -- tiles are within the rectangle. 
+
+        -- tile# = (32Y + X)
+
+        -- Add an array to softwareBitAreas{}
+        -- Now we make an array that contains all tileMap indexes the slice contains
+        -- as well as the value of the slice.data, should be some kind of 3 char binary
+        -- Since lua ALLOWS 
+        -- but doesnt encourage 0-indexing, we could put the value at index zero. 
+        -- Below shows that adding a value to the 0-index location doesn't affect its length
+        --[[ local testArray = {}
+        testArray[0] = "wowza"
+        testArray[1] = "Boy oh boy"
+        print("Length of test Array: " .. #testArray)
+        -- Prints out 1, even though there are techinically 2 values stores ]]
+
+
+
+    end
+end
     
     
 
-    -- Go through a third of the screen
+    -- Go through a screen one tile at a time
     for tilePattern = 1, tileCount, 1 do
         -- Set our baseline X and Y
         origX = currentX
@@ -435,11 +494,17 @@ local function recordTiles(currentX, currentY, numTiles, tilePatternTable, tileP
                 -- Keep a record of its HV pattern
                 tilePatternTableHV[#tilePatternTableHV + 1] = makeHorizontalTile(verticalTile)
                 
+                -- Check if it needs to OR any softwareBits into the map data
+                local softwareBitValue = 0x00
+
                 -- And save the Tile Pattern to the map
-                tileMapTable[#tileMapTable + 1] = ("$" .. string.format("%04X", (tileOffset + currentTile[tileIndex])))
+                tileMapTable[#tileMapTable + 1] = ("$" .. string.format("%04X", ((tileOffset + currentTile[tileIndex])) | softwareBitValue))
             else
+                -- Check if it needs to OR any softwareBits into the map data
+                local softwareBitValue = 0x00
+
                 -- And save the Tile Pattern to the map
-                tileMapTable[#tileMapTable + 1] = ("$" .. string.format("%04X", (tileOffset + currentTile[tileIndex]) | currentTile[tileStatus]))
+                tileMapTable[#tileMapTable + 1] = ("$" .. string.format("%04X", (tileOffset + currentTile[tileIndex]) | currentTile[tileStatus] | softwareBitValue))
 
             end                  
             
