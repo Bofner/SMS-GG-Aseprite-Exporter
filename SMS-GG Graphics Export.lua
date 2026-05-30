@@ -18,6 +18,20 @@ local newTile = 0x0001
 
 --Slices to be used for software bits
 local slices = sprite.slices
+for currentSlice = 1, #slices, 1 do
+        if #slices[currentSlice].data < 5 then
+        local dlg = Dialog{title = "Slice data formatting incorrect!"}
+        dlg:label{ 	id    = "sliceError",
+                    label = "Warning!",
+                    text  = " Please set first five characters of the slice at (" .. slices[currentSlice].bounds.x .. "," .. slices[currentSlice].bounds.y .. ")" .. " to the desired bits (i.e. 10010)" }
+        dlg:button{ id="cancel", text="Okay" }
+        dlg:show()
+        local data = dlg.data
+        return
+
+    end
+end
+
 local softwareBitAreas = {}
 
 
