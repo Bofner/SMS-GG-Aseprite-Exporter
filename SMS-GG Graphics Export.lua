@@ -342,22 +342,35 @@ for i = 1, #slices, 1 do
 		end
         -- We've got our adjusted rectangle, so now we need to figure out which 
         -- tiles are within the rectangle. 
+        -- First let's find out how many tiles there are in total.
+        local numTilesInSlice = (tiledRect.width / 8) * (tiledRect.height / 8)
 
-        -- tile# = (32Y + X)
+        -- Next we need to find the "tile number"... This will be the order in which tiles are
+        -- written to the map. The formula is : tile# = (32Y + X)
+        local originTile = (tiledRect.y / 8 * 32) + (tiledRect.x / 8)
 
+        -- Create a for loop to add every single tile to the slice
+        local containedTiles = {}
+        local tileOffset = 0
+        for currentTile = 1, numTilesInSlice, 1 do
+
+            containedTiles[currentTile] = originTile + tileOffset
+
+            if currentTile % (tiledRect.width / 8) == 0 then
+                tileOffset = tileOffset + (32 - ((tiledRect.width / 8) - 1))
+            else
+                tileOffset = tileOffset + 1
+            end
+            
+        end
+
+        -- Add the slice's data value to the 0-index of the array
+        containedTiles[0] = slices[i].data
+            
         -- Add an array to softwareBitAreas{}
-        -- Now we make an array that contains all tileMap indexes the slice contains
-        -- as well as the value of the slice.data, should be some kind of 3 char binary
-        -- Since lua ALLOWS 
-        -- but doesnt encourage 0-indexing, we could put the value at index zero. 
-        -- Below shows that adding a value to the 0-index location doesn't affect its length
-        --[[ local testArray = {}
-        testArray[0] = "wowza"
-        testArray[1] = "Boy oh boy"
-        print("Length of test Array: " .. #testArray)
-        -- Prints out 1, even though there are techinically 2 values stores ]]
+        softwareBitAreas[#softwareBitAreas + 1] = containedTiles
 
-
+        --print("Array= " .. softwareBitAreas[1][0])
 
     end
 end
@@ -482,6 +495,26 @@ end
             local tileStatus = 1
             local tileIndex = 2
             currentTile = compareTilePattern(tileBuffer, tilePatternTable, tilePatternTableHori, tilePatternTableVert, tilePatternTableHV)
+
+            -- Check if the tile is contained within a slice for its map
+            local softwareBitValue = 0x0000
+            -- Check if the current tile is within one of the special softwareBit slices
+            for currentSlice = 1, #softwareBitAreas, 1 do
+                -- Check through each tile of the current slice
+                for currentSliceTile = 1, #softwareBitAreas[currentSlice], 1 do
+                    if softwareBitAreas[currentSlice][currentSliceTile] == tilePattern then
+                        -- If the tile IS contained in a slice, update the softwareBitValue to reflect that value
+                        for currentBit = 5, 1, -1 do
+                            local checkBit = tonumber(string.sub(softwareBitAreas[currentSlice][0], currentBit, currentBit))
+                            softwareBitValue = softwareBitValue >> 1
+                            if checkBit == 1 then
+                                softwareBitValue = softwareBitValue + 0x8000
+                            end
+                        end
+                    end
+                end
+            end
+
             -- If it's a new pattern, then save the Tile Pattern and the associated color pattern
             if currentTile[tileStatus] == newTile then
                 -- Save current tile
@@ -494,18 +527,12 @@ end
                 -- Keep a record of its HV pattern
                 tilePatternTableHV[#tilePatternTableHV + 1] = makeHorizontalTile(verticalTile)
                 
-                -- Check if it needs to OR any softwareBits into the map data
-                local softwareBitValue = 0x00
 
                 -- And save the Tile Pattern to the map
                 tileMapTable[#tileMapTable + 1] = ("$" .. string.format("%04X", ((tileOffset + currentTile[tileIndex])) | softwareBitValue))
             else
-                -- Check if it needs to OR any softwareBits into the map data
-                local softwareBitValue = 0x00
-
                 -- And save the Tile Pattern to the map
                 tileMapTable[#tileMapTable + 1] = ("$" .. string.format("%04X", (tileOffset + currentTile[tileIndex]) | currentTile[tileStatus] | softwareBitValue))
-
             end                  
             
     end
