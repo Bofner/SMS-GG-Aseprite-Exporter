@@ -16,6 +16,24 @@ local repeatVertTile = 0x0400
 local repeatHVTile = 0x0600
 local newTile = 0x0001
 
+--Slices to be used for software bits
+local slices = sprite.slices
+for currentSlice = 1, #slices, 1 do
+        if #slices[currentSlice].data < 5 then
+        local dlg = Dialog{title = "Slice data formatting incorrect!"}
+        dlg:label{ 	id    = "sliceError",
+                    label = "Warning!",
+                    text  = " Please set first five characters of the slice at (" .. slices[currentSlice].bounds.x .. "," .. slices[currentSlice].bounds.y .. ")" .. " to the desired bits (i.e. 10010)" }
+        dlg:button{ id="cancel", text="Okay" }
+        dlg:show()
+        local data = dlg.data
+        return
+
+    end
+end
+
+local softwareBitAreas = {}
+
 
 --Palette Constants
 local currentPal = Palette(sprite.palettes[1])
@@ -302,10 +320,78 @@ local function recordTiles(currentX, currentY, numTiles, tilePatternTable, tileP
     local origY = currentY
     local pixelColor = 0
     local newRow = false
+
+    -- User determines the palette used for each ATR
+for i = 1, #slices, 1 do
+	if slices[i] ~= nil then
+		-- Adjust size of the slice in order to accomodate BG tiles
+		local tiledRect = slices[i].bounds
+		--X
+		if tiledRect.x % 8 > 4 then
+			tiledRect.width = tiledRect.width - (8 - tiledRect.x % 8)
+			tiledRect.x = tiledRect.x + (8 - tiledRect.x % 8)
+		else
+			tiledRect.width = tiledRect.width + (tiledRect.x % 8)
+			tiledRect.x = tiledRect.x - tiledRect.x % 8
+		end
+		--Y
+		if tiledRect.y % 8 > 4 then
+			tiledRect.height = tiledRect.height - (8 - tiledRect.y % 8)
+			tiledRect.y = tiledRect.y + (8 - tiledRect.y % 8)
+		else
+			tiledRect.height = tiledRect.height + (tiledRect.y % 8)
+			tiledRect.y = tiledRect.y - tiledRect.y % 8
+		end
+		--WIDTH
+		if tiledRect.width % 8 > 4 then
+			tiledRect.width = tiledRect.width + (8 - (tiledRect.width) % 8)
+		else
+			tiledRect.width = tiledRect.width - tiledRect.width % 8
+		end
+		--HEIGHT
+		if tiledRect.height % 8 > 4 then
+			tiledRect.height = tiledRect.height + (8 - (tiledRect.height) % 8)
+		else
+			tiledRect.height = tiledRect.height - tiledRect.height % 8
+		end
+        -- We've got our adjusted rectangle, so now we need to figure out which 
+        -- tiles are within the rectangle. 
+        -- First let's find out how many tiles there are in total.
+        local numTilesInSlice = (tiledRect.width / 8) * (tiledRect.height / 8)
+
+        -- Next we need to find the "tile number"... This will be the order in which tiles are
+        -- written to the map. The formula is : tile# = (32Y + X)
+        local originTile = (tiledRect.y / 8 * 32) + (tiledRect.x / 8)
+
+        -- Create a for loop to add every single tile to the slice
+        local containedTiles = {}
+        local tileOffset = 0
+        for currentTile = 1, numTilesInSlice, 1 do
+
+            containedTiles[currentTile] = originTile + tileOffset
+
+            if currentTile % (tiledRect.width / 8) == 0 then
+                tileOffset = tileOffset + (32 - ((tiledRect.width / 8) - 1))
+            else
+                tileOffset = tileOffset + 1
+            end
+            
+        end
+
+        -- Add the slice's data value to the 0-index of the array
+        containedTiles[0] = slices[i].data
+            
+        -- Add an array to softwareBitAreas{}
+        softwareBitAreas[#softwareBitAreas + 1] = containedTiles
+
+        --print("Array= " .. softwareBitAreas[1][0])
+
+    end
+end
     
     
 
-    -- Go through a third of the screen
+    -- Go through a screen one tile at a time
     for tilePattern = 1, tileCount, 1 do
         -- Set our baseline X and Y
         origX = currentX
@@ -423,6 +509,26 @@ local function recordTiles(currentX, currentY, numTiles, tilePatternTable, tileP
             local tileStatus = 1
             local tileIndex = 2
             currentTile = compareTilePattern(tileBuffer, tilePatternTable, tilePatternTableHori, tilePatternTableVert, tilePatternTableHV)
+
+            -- Check if the tile is contained within a slice for its map
+            local softwareBitValue = 0x0000
+            -- Check if the current tile is within one of the special softwareBit slices
+            for currentSlice = 1, #softwareBitAreas, 1 do
+                -- Check through each tile of the current slice
+                for currentSliceTile = 1, #softwareBitAreas[currentSlice], 1 do
+                    if softwareBitAreas[currentSlice][currentSliceTile] == tilePattern then
+                        -- If the tile IS contained in a slice, update the softwareBitValue to reflect that value
+                        for currentBit = 5, 1, -1 do
+                            local checkBit = tonumber(string.sub(softwareBitAreas[currentSlice][0], currentBit, currentBit))
+                            softwareBitValue = softwareBitValue >> 1
+                            if checkBit == 1 then
+                                softwareBitValue = softwareBitValue + 0x8000
+                            end
+                        end
+                    end
+                end
+            end
+
             -- If it's a new pattern, then save the Tile Pattern and the associated color pattern
             if currentTile[tileStatus] == newTile then
                 -- Save current tile
@@ -435,12 +541,12 @@ local function recordTiles(currentX, currentY, numTiles, tilePatternTable, tileP
                 -- Keep a record of its HV pattern
                 tilePatternTableHV[#tilePatternTableHV + 1] = makeHorizontalTile(verticalTile)
                 
+
                 -- And save the Tile Pattern to the map
-                tileMapTable[#tileMapTable + 1] = ("$" .. string.format("%04X", (tileOffset + currentTile[tileIndex])))
+                tileMapTable[#tileMapTable + 1] = ("$" .. string.format("%04X", ((tileOffset + currentTile[tileIndex])) | softwareBitValue))
             else
                 -- And save the Tile Pattern to the map
-                tileMapTable[#tileMapTable + 1] = ("$" .. string.format("%04X", (tileOffset + currentTile[tileIndex]) | currentTile[tileStatus]))
-
+                tileMapTable[#tileMapTable + 1] = ("$" .. string.format("%04X", (tileOffset + currentTile[tileIndex]) | currentTile[tileStatus] | softwareBitValue))
             end                  
             
     end
