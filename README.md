@@ -35,7 +35,7 @@ Then just implement the data into your source code and you're good to go!
 ## Updates
 ### 2026/09/30
 - Added a checkbox for exporting palettes
-- 
+
 ### 2026/05/15
 - Added support for 8x8 and 8x16 sprites!
 - Adjusted the default keyboard focus on the menus to make reading a little easier
