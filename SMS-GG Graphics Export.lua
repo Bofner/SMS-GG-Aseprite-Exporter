@@ -672,6 +672,9 @@ local function exportBackground()
             save=true,
             filename= spriteFilePath .. "Pal.inc",
             filetypes={"inc"}}
+    dlg:check{ id="exportPalette",
+           text="Export Palette",
+           selected=false}
     
 
     dlg:button{ id="ok", text="OK", focus = true  }
@@ -702,7 +705,9 @@ local function exportBackground()
         writeTileMapToIncFile(data.mapFile, tileMapTable, data.systemType)
 
         --Save the palette file
-        writePaletteToIncFile(data.paletteFile, data.systemType)
+        if data.exportPalette then
+            writePaletteToIncFile(data.paletteFile, data.systemType)
+        end
 
     end
 end
@@ -950,6 +955,9 @@ local function exportSprite()
             save=true,
             filename= spriteFilePath .. "SpritePal.inc",
             filetypes={"inc"}}
+	dlg:check{ id="exportPalette",
+           text="Export Palette",
+           selected=false}
     
     dlg:button{ id="ok", text="OK", focus = true   }
     dlg:button{ id="cancel", text="Cancel"}
@@ -969,7 +977,9 @@ local function exportSprite()
         writeSpriteTilePatternToIncFile(data.tileFile, tilePatternTable, data.systemType, data.spriteSize)
 
         --Save the palette file
-        writePaletteToIncFile(data.paletteFile, data.systemType)
+		if data.exportPalette then
+            writePaletteToIncFile(data.paletteFile, data.systemType)
+        end
 
 
     end
