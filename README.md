@@ -33,8 +33,6 @@ Select a target system (SMS or GG), an offset for where in VRAM your tile will b
 Then just implement the data into your source code and you're good to go!
 
 ## Updates
-### 2026/09/30
-- Added a checkbox for exporting palettes
 
 ### 2026/05/15
 - Added support for 8x8 and 8x16 sprites!
@@ -49,7 +47,10 @@ Then just implement the data into your source code and you're good to go!
     - S: Software Flag, no direct purpose, but can be used by the programmer
     - B: Background Priority Flag, forces sprites behind this tile's pixels that are NOT the 0-index color
     - P: Sprite Palette Flag, has the tile use the sprite palette instead of the background palette
-  - NOTE: Only the first 5 characters are checked in the slice data, so the first 5 MUST be either 0 or 1. However, after that, nothing else is checked, so you can still use the data for taking notes, or anything else you would like. 
+  - NOTE: Only the first 5 characters are checked in the slice data, so the first 5 MUST be either 0 or 1. However, after that, nothing else is checked, so you can still use the data for taking notes, or anything else you would like.
+ 
+### 2026/09/30
+- Added a checkbox for exporting palettes
 
 ### Planned:
 - ~~Sprite support~~
