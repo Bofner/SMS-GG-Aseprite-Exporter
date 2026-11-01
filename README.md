@@ -52,6 +52,9 @@ Then just implement the data into your source code and you're good to go!
 ### 2026/09/30
 - Added a checkbox for exporting palettes
 
+### 2026/11/01
+- Coverted entire script to an extension that can be installed and accessed from File -> Export -> SMS-GG Export
+
 ### Planned:
 - ~~Sprite support~~
   - ~~8x8~~
