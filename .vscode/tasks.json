@@ -1,0 +1,47 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Build Aseprite extension",
+      "type": "shell",
+      "command": "rm -f sms-gg.aseprite-extension && zip -r -q sms-gg.aseprite-extension sms-gg -x '*.DS_Store' && echo 'Built sms-gg.aseprite-extension'",
+      "windows": {
+        "command": "tar --format=zip -cf sms-gg.aseprite-extension sms-gg; echo 'Built sms-gg.aseprite-extension'"
+      },
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "presentation": {
+        "reveal": "silent",
+        "revealProblems": "onProblem",
+        "clear": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Build and install into Aseprite",
+      "type": "shell",
+      "dependsOn": "Build Aseprite extension",
+      "command": "mkdir -p ~/.config/aseprite/extensions/sms-gg-export && cp sms-gg/* ~/.config/aseprite/extensions/sms-gg-export/ && echo 'Installed. Restart Aseprite to load changes.'",
+      "osx": {
+        "command": "mkdir -p ~/Library/Application\\ Support/Aseprite/extensions/sms-gg-export && cp sms-gg/* ~/Library/Application\\ Support/Aseprite/extensions/sms-gg-export/ && echo 'Installed. Restart Aseprite to load changes.'"
+      },
+      "windows": {
+        "command": "New-Item -ItemType Directory -Force \"$env:APPDATA\\Aseprite\\extensions\\sms-gg-export\" | Out-Null; Copy-Item -Force sms-gg\\* \"$env:APPDATA\\Aseprite\\extensions\\sms-gg-export\\\"; echo 'Installed. Restart Aseprite to load changes.'"
+      },
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "presentation": {
+        "reveal": "silent",
+        "revealProblems": "onProblem",
+        "clear": true
+      },
+      "problemMatcher": []
+    }
+  ]
+}
