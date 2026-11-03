@@ -178,6 +178,7 @@ function recordTiles(currentX, currentY, numTiles, tilePatternTable, tilePattern
     local origY = currentY
     local pixelColor = 0
     local newRow = false
+    local softwareBitAreas = {}
 
     -- User determines the palette used for each ATR
     for i = 1, #slices, 1 do
@@ -224,7 +225,7 @@ function recordTiles(currentX, currentY, numTiles, tilePatternTable, tilePattern
             -- Create a for loop to add every single tile to the slice
             local containedTiles = {}
             local tileOffset = 0
-            for currentTile = 1, numTilesInSlice, 1 do
+            for currentTile = 1, numTilesInSlice + 1, 1 do
 
                 containedTiles[currentTile] = originTile + tileOffset
 
@@ -360,7 +361,6 @@ function recordTiles(currentX, currentY, numTiles, tilePatternTable, tilePattern
             -- Check if this is a new Tile Pattern, or a duplicate
             local tileStatus = 1
             local tileIndex = 2
-            local softwareBitAreas = {}
             currentTile = compareTilePattern(tileBuffer, tilePatternTable, tilePatternTableHori, tilePatternTableVert, tilePatternTableHV)
 
             -- Check if the tile is contained within a slice for its map
