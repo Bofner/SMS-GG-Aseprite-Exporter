@@ -56,8 +56,8 @@ local function exportSprite(sprite, slices, currentPal, img)
             }
         dlg:combobox{ id="compression",
             label="Compression Algorithm",
-            option="Phantasy Star RLE",
-            options={ "Phantasy Star RLE","Raw" },
+            option="Raw",
+            options={ "Raw" },
             }
         dlg:combobox{ id="spriteSize",
               label="Sprite Size",
@@ -152,8 +152,8 @@ local function exportBackground(sprite, slices, currentPal, img)
             }
         dlg:combobox{ id="compression",
             label="Compression Algorithm",
-            option="Phantasy Star RLE",
-            options={ "Phantasy Star RLE","Raw" },
+            option="Raw",
+            options={ "Raw" },
             }
         dlg:number{ id="tileOffsetValue", label="Tile Offset (Decimal)", text="0", value=0, min = 0, max=255}
         dlg:file{ id="tileFile",

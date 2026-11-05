@@ -55,6 +55,11 @@ Then just implement the data into your source code and you're good to go!
 ### 2026/11/01
 - Coverted entire script to an extension that can be installed and accessed from File -> Export -> SMS-GG Export
 
+### 2026/11/05
+- Added special palette only export option in the main menu
+- added .bin file support (finally)
+- added a compression option that currently doesn nothing. Sit tight please!
+
 ### Planned:
 - ~~Sprite support~~
   - ~~8x8~~
