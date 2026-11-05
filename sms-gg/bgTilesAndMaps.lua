@@ -95,7 +95,7 @@ function makeHorizontalTile(tileBuffer)
     for byte = 1, tileSize, 1 do
         
         -- Convert byte to a number
-        local currentByte = tonumber(tileBuffer[byte]:match("^$(.*)"), 16)
+        local currentByte = tileBuffer[byte]
         horizontalTileBuffer[byte] = 0x00
         -- Bit 0 goes to bit 7
         bitSetter = (currentByte << 7) & 0x80
@@ -122,7 +122,7 @@ function makeHorizontalTile(tileBuffer)
         bitSetter = (currentByte >> 7) & 0x01
         horizontalTileBuffer[byte] = horizontalTileBuffer[byte] | bitSetter
 
-        horizontalTileBuffer[byte] = ("$" .. string.format("%02X", horizontalTileBuffer[byte]))
+        horizontalTileBuffer[byte] = horizontalTileBuffer[byte]
         if byte == 1 then
             --print("Normal Byte: " .. tileBuffer[byte] .. " Mirrored Byte: " .. horizontalTileBuffer[byte])
         end
@@ -313,10 +313,10 @@ function recordTiles(currentX, currentY, numTiles, tilePatternTable, tilePattern
                 -- Wow I hate doing bit manipulation in Lua
 
                 -- Save our Two Pixel Bytes to the table
-                tileBuffer[tileCount + 0] = ("$" .. string.format("%02X", rowDataByte0) )
-                tileBuffer[tileCount + 1] = ("$" .. string.format("%02X", rowDataByte1) )
-                tileBuffer[tileCount + 2] = ("$" .. string.format("%02X", rowDataByte2) )
-                tileBuffer[tileCount + 3] = ("$" .. string.format("%02X", rowDataByte3) )
+                tileBuffer[tileCount + 0] = rowDataByte0
+                tileBuffer[tileCount + 1] = rowDataByte1
+                tileBuffer[tileCount + 2] = rowDataByte2
+                tileBuffer[tileCount + 3] = rowDataByte3
 
                 -- Prepare to check next row
                 currentX = currentX + 1
@@ -396,10 +396,10 @@ function recordTiles(currentX, currentY, numTiles, tilePatternTable, tilePattern
                 
 
                 -- And save the Tile Pattern to the map
-                tileMapTable[#tileMapTable + 1] = ("$" .. string.format("%04X", ((tileOffset + currentTile[tileIndex])) | softwareBitValue))
+                tileMapTable[#tileMapTable + 1] = (tileOffset + currentTile[tileIndex]) | softwareBitValue
             else
                 -- And save the Tile Pattern to the map
-                tileMapTable[#tileMapTable + 1] = ("$" .. string.format("%04X", (tileOffset + currentTile[tileIndex]) | currentTile[tileStatus] | softwareBitValue))
+                tileMapTable[#tileMapTable + 1] = (tileOffset + currentTile[tileIndex]) | currentTile[tileStatus] | softwareBitValue
             end                  
             
     end
@@ -410,8 +410,7 @@ end
 ----------------------------------------------------------------------------------
 -- write the Tile Pattern Data to inc files
 ----------------------------------------------------------------------------------
-function writeTilePatternToIncFile(file, tilePatternData, system)
-
+function writeRawTilePatternToIncFile(file, tilePatternData, system)
     local tileIncFile = io.open(file, "w")
     local byteCount = 1
     local tileSize = 32
@@ -432,27 +431,50 @@ function writeTilePatternToIncFile(file, tilePatternData, system)
         -- Each tile is made of 32 bytes
         for tileBytes = 1, tileSize, 1 do
             --print(tilePatternData[byteCount])
-            tileIncFile:write(tilePatternData[tile][tileBytes].." ")
+            tileIncFile:write("$" .. string.format("%02X",tilePatternData[tile][tileBytes]) .." ")
             byteCount = byteCount + 1
             if tileBytes % 4 == 0 and tileBytes ~= 32 then
                 tileIncFile:write("\n")
                 tileIncFile:write(".DB ")
             end
-            
-
         end
         tileIncFile:write(" \n")
     end
     
     tileIncFile:write("; End of file\n")
     tileIncFile:close();
-
 end
+
+
+----------------------------------------------------------------------------------
+-- write the Tile Pattern Data to bin files
+----------------------------------------------------------------------------------
+function writeRawTilePatternToBinFile(file, tilePatternData, system)
+    local rawTileBin = io.open(file, "w")
+    local byteCount = 1
+    local tileSize = 32
+    -- Write the pattern data
+    local totalNumTiles
+    if #tilePatternData > 448 then
+       totalNumTiles = 448
+    else
+        totalNumTiles = #tilePatternData
+    end
+    for tile = 1, totalNumTiles, 1 do
+        for tileBytes = 1, tileSize, 1 do
+            --print(tilePatternData[byteCount])
+            rawTileBin:write(string.char(tilePatternData[tile][tileBytes]))
+            byteCount = byteCount + 1
+        end
+    end
+    rawTileBin:close();
+end
+
 
 ----------------------------------------------------------------------------------
 -- write the Map Data to inc files 
 ----------------------------------------------------------------------------------
-function writeTileMapToIncFile(file, tileMapTable, system)
+function writeRawTileMapToIncFile(file, tileMapTable, system)
 
     local mapIncFile = io.open(file, "w")
     local rowCount = 1
@@ -472,7 +494,7 @@ function writeTileMapToIncFile(file, tileMapTable, system)
     mapIncFile:write(".DW ")
     for mapWord = 1, totalMapTiles, 1 do
         --print(tilePatternData[byteCount])
-        mapIncFile:write(tileMapTable[mapWord].." ")
+        mapIncFile:write("$" .. string.format("%04X", tileMapTable[mapWord]) .. " ")
         
         if mapWord % 32 == 0 and mapWord ~= totalMapTiles then
             mapIncFile:write("\n")
@@ -487,4 +509,26 @@ function writeTileMapToIncFile(file, tileMapTable, system)
     mapIncFile:write("; End of file\n")
     mapIncFile:close();
 
+end
+
+
+----------------------------------------------------------------------------------
+-- write the Map Data to bin files 
+----------------------------------------------------------------------------------
+function writeRawTileMapToBinFile(file, tileMapTable, system)
+
+    local mapIncFile = io.open(file, "w")
+    local rowCount = 1
+    -- Write the pattern data
+    local totalMapTiles
+    if #tileMapTable > 768 then
+       totalMapTiles = 768
+    else
+        totalMapTiles = #tileMapTable
+    end
+    for mapWord = 1, totalMapTiles, 1 do
+        --print(tilePatternData[byteCount])
+        mapIncFile:write(string.pack(">I2", tileMapTable[mapWord]))
+    end
+    mapIncFile:close();
 end

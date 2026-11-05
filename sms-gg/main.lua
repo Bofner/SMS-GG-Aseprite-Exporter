@@ -20,6 +20,8 @@ require("palettes")
 require("spriteTiles")
 require("bgTilesAndMaps")
 
+
+
 ----------------------------------------------------------------------------------
 -- Exports Sprite Data
 ----------------------------------------------------------------------------------
@@ -33,38 +35,58 @@ local function exportSprite(sprite, slices, currentPal, img)
     local numTiles = (sprite.width / 8) * (sprite.height / 8)
  
     --Menu that pops up in Aseprite
-    local dlg = Dialog()
-    dlg:combobox{ id="systemType",
-        label="System Type",
-        option="SMS",
-        options={ "SMS","GG" },
-        }
-    dlg:combobox{ id="spriteSize",
-            label="Sprite Size",
-            option="8x8 Pixels",
-            options={ "8x8 Pixels","8x16 Pixels" },
+    local dlg = Dialog("Sprite Export")
+        local function updateFilePath()
+            local data = dlg.data
+            local tileBase = app.fs.filePathAndTitle(data.tileFile)
+            dlg:modify{ id="tileFile", filename = tileBase .. "." .. data.fileType }
+            local paletteBase = app.fs.filePathAndTitle(data.paletteFile)
+            dlg:modify{ id="paletteFile", filename = paletteBase .. "." .. data.fileType }
+        end
+        dlg:combobox{ id="systemType",
+            label="System Type",
+            option="SMS",
+            options={ "SMS","GG" },
             }
-    dlg:file{ id="tileFile",
+        dlg:combobox{ id="fileType",
+            label="File Type",
+            option="inc",
+            options={ "inc","bin" },
+            onchange= updateFilePath
+            }
+        dlg:combobox{ id="compression",
+            label="Compression Algorithm",
+            option="Phantasy Star RLE",
+            options={ "Phantasy Star RLE","Raw" },
+            }
+        dlg:combobox{ id="spriteSize",
+              label="Sprite Size",
+              option="8x8 Pixels",
+              options={ "8x8 Pixels","8x16 Pixels" },
+        }
+        dlg:file{ id="tileFile",
             label="Tile-Pattern-File",
             title="SMS-GG Export",
             open=false,
             save=true,
             filename= spriteFilePath .. "SpriteTiles.inc",
-            filetypes={"inc"}}
-    dlg:file{ id="paletteFile",
+            filetypes={"inc","bin"}
+        }
+        dlg:file{ id="paletteFile",
             label="Palette-File",
             title="SMS-GG Export",
             open=false,
             save=true,
             filename= spriteFilePath .. "SpritePal.inc",
-            filetypes={"inc"}}
-    dlg:check{ id="exportPalette",
-        text="Export Palette",
-        selected=false}
-    
-    dlg:button{ id="ok", text="OK", focus = true   }
-    dlg:button{ id="cancel", text="Cancel"}
-    dlg:show()
+            filetypes={"inc","bin"}
+        }
+        dlg:check{ id="exportPalette",
+            text="Export Palette",
+            selected=false
+        }
+        dlg:button{ id="ok", text="OK", focus = true}
+        dlg:button{ id="cancel", text="Cancel"}
+        dlg:show()
     local data = dlg.data
 
     if data.ok then
@@ -73,18 +95,22 @@ local function exportSprite(sprite, slices, currentPal, img)
         -- Begin our conversion
         local x = 0
         local y = 0
-
         recordSpriteTiles(x, y, numTiles, tilePatternTable, data.spriteSize, sprite, img)
         -- Save the tiles to a file
         -- Write to file
-        writeSpriteTilePatternToIncFile(data.tileFile, tilePatternTable, data.systemType, data.spriteSize)
-
-        --Save the palette file
-        if data.exportPalette then
-            writePaletteToIncFile(data.paletteFile, data.systemType, currentPal)
+        if data.fileType == "inc" then
+            writeRawSpriteTilePatternToIncFile(data.tileFile, tilePatternTable, data.systemType)
+            -- Save the palette file
+            if data.exportPalette then
+                writePaletteToIncFile(data.paletteFile, data.systemType, currentPal)
+            end
+        elseif data.fileType == "bin" then
+            writeRawSpriteTilePatternToBinFile(data.tileFile, tilePatternTable, data.systemType)
+            -- Save the palette file
+            if data.exportPalette then
+                writePaletteToBinFile(data.paletteFile, data.systemType, currentPal)
+            end
         end
-
-
     end
 end
 
@@ -102,11 +128,32 @@ local function exportBackground(sprite, slices, currentPal, img)
     local numTiles = (sprite.width / 8) * (sprite.height / 8) 
 
     -- Menu that pops up in Aseprite
-    local dlg = Dialog()
+    local dlg = Dialog("Background Export")
+        -- Update the export file type
+        local function updateFilePath()
+            local data = dlg.data
+            local tileBase = app.fs.filePathAndTitle(data.tileFile)
+            dlg:modify{ id="tileFile", filename = tileBase .. "." .. data.fileType }
+            local mapBase = app.fs.filePathAndTitle(data.mapFile)
+            dlg:modify{ id="mapFile", filename = mapBase .. "." .. data.fileType }
+            local paletteBase = app.fs.filePathAndTitle(data.paletteFile)
+            dlg:modify{ id="paletteFile", filename = paletteBase .. "." .. data.fileType }
+        end
         dlg:combobox{ id="systemType",
             label="System Type",
             option="SMS",
             options={ "SMS","GG" },
+            }
+        dlg:combobox{ id="fileType",
+            label="File Type",
+            option="inc",
+            options={ "inc","bin" },
+            onchange= updateFilePath
+            }
+        dlg:combobox{ id="compression",
+            label="Compression Algorithm",
+            option="Phantasy Star RLE",
+            options={ "Phantasy Star RLE","Raw" },
             }
         dlg:number{ id="tileOffsetValue", label="Tile Offset (Decimal)", text="0", value=0, min = 0, max=255}
         dlg:file{ id="tileFile",
@@ -114,22 +161,22 @@ local function exportBackground(sprite, slices, currentPal, img)
                 title="SMS-GG Export",
                 open=false,
                 save=true,
-                filename= spriteFilePath .. "Tiles.inc",
-                filetypes={"inc"}}
+                filename= spriteFilePath .. "Tiles",
+                filetypes={"inc","bin"}}
         dlg:file{ id="mapFile",
                 label="Tile-Map-File",
                 title="SMS-GG Export",
                 open=false,
                 save=true,
-                filename= spriteFilePath .. "Map.inc",
-                filetypes={"inc"}}
+                filename= spriteFilePath .. "Map",
+                filetypes={"inc","bin"}}
         dlg:file{ id="paletteFile",
                 label="Palette-File",
                 title="SMS-GG Export",
                 open=false,
                 save=true,
-                filename= spriteFilePath .. "Pal.inc",
-                filetypes={"inc"}}
+                filename= spriteFilePath .. "Pal",
+                filetypes={"inc","bin"}}
         dlg:check{ id="exportPalette",
             text="Export Palette",
             selected=false}
@@ -158,14 +205,68 @@ local function exportBackground(sprite, slices, currentPal, img)
         recordTiles(x, y, numTiles, tilePatternTable, tilePatternTableHori, tilePatternTableVert, tilePatternTableHV, data.tileOffsetValue, tileMapTable, slices, img)
         -- Save the tiles to a file
         -- Write to file
-        writeTilePatternToIncFile(data.tileFile, tilePatternTable, data.systemType)
-        writeTileMapToIncFile(data.mapFile, tileMapTable, data.systemType)
-
-        -- Save the palette file
-        if data.exportPalette then
-            writePaletteToIncFile(data.paletteFile, data.systemType, currentPal)
+        if data.fileType == "inc" then
+            writeRawTilePatternToIncFile(data.tileFile, tilePatternTable, data.systemType)
+            writeRawTileMapToIncFile(data.mapFile, tileMapTable, data.systemType)
+            -- Save the palette file
+            if data.exportPalette then
+                writePaletteToIncFile(data.paletteFile, data.systemType, currentPal)
+            end
+        elseif data.fileType == "bin" then
+            writeRawTilePatternToBinFile(data.tileFile, tilePatternTable, data.systemType)
+            writeRawTileMapToBinFile(data.mapFile, tileMapTable, data.systemType)
+            -- Save the palette file
+            if data.exportPalette then
+                writePaletteToBinFile(data.paletteFile, data.systemType, currentPal)
+            end
         end
+    end
+end
 
+
+----------------------------------------------------------------------------------
+-- Exports Palette Data
+----------------------------------------------------------------------------------
+local function exportPalette(sprite, currentPal, img)
+    --Menu that pops up in Aseprite
+    local dlg = Dialog("Palette Export")
+        local function updateFilePath()
+            local data = dlg.data
+            local base = app.fs.filePathAndTitle(data.paletteFile)
+            dlg:modify{ id="paletteFile", filename = base .. "." .. data.fileType }
+        end
+        dlg:combobox{ id="systemType",
+            label="System Type",
+            option="SMS",
+            options={ "SMS","GG" },
+        }
+        dlg:combobox{ id="fileType",
+            label="File Type",
+            option="inc",
+            options={ "inc","bin" },
+            onchange= updateFilePath
+        } 
+        dlg:file{ id= "paletteFile",
+            title= "SMS-GG Export",
+            filename=spriteFilePath .. "Pal",
+            open=false,
+            save=true,
+            filetypes={ "inc", "bin"},
+        }
+        
+        dlg:button{ id="ok", text="OK", focus = true}
+        dlg:button{ id="cancel", text="Cancel"}
+        dlg:show()
+    local data = dlg.data
+
+    if data.ok then
+        local paletteFilePath = data.paletteFile --.. data.fileType
+        if data.fileType == "inc" then
+            writePaletteToIncFile(paletteFilePath, data.systemType, currentPal)
+        elseif data.fileType == "bin" then
+            writePaletteToBinFile(paletteFilePath, data.systemType, currentPal)
+        end
+        
     end
 end
 
@@ -245,10 +346,12 @@ local function graphicsExport()
         end
 
 
-        local dlg = Dialog()
+        local dlg = Dialog("SMS-GG Graphics Export")
 
         dlg:button{ id="background", text="Export Background", focus = false }
         dlg:button{ id="sprite", text="Export Sprite", focus = false  }
+        dlg:newrow()
+        dlg:button{ id="palette", text="Export Palette", focus = false  }
         dlg:button{ id="cancel", text="Cancel", focus = true }
         dlg:show()
         local data = dlg.data
@@ -256,6 +359,8 @@ local function graphicsExport()
             exportBackground(sprite, slices, currentPal, img)
         elseif data.sprite then
             exportSprite(sprite, slices, currentPal, img)
+        elseif data.palette then
+            exportPalette(sprite, currentPal, img)
         else
             return
         end

@@ -82,10 +82,10 @@ function recordSpriteTiles(currentX, currentY, numTiles, tilePatternTable, sprit
                 -- Wow I hate doing bit manipulation in Lua
 
                 -- Save our Two Pixel Bytes to the table
-                tileBuffer[tileCount + 0] = ("$" .. string.format("%02X", rowDataByte0) )
-                tileBuffer[tileCount + 1] = ("$" .. string.format("%02X", rowDataByte1) )
-                tileBuffer[tileCount + 2] = ("$" .. string.format("%02X", rowDataByte2) )
-                tileBuffer[tileCount + 3] = ("$" .. string.format("%02X", rowDataByte3) )
+                tileBuffer[tileCount + 0] = rowDataByte0
+                tileBuffer[tileCount + 1] = rowDataByte1
+                tileBuffer[tileCount + 2] = rowDataByte2
+                tileBuffer[tileCount + 3] = rowDataByte3
 
                 -- Prepare to check next row
                 currentX = currentX + 1
@@ -138,7 +138,7 @@ end
 ----------------------------------------------------------------------------------
 -- write the Tile Pattern Data to inc files
 ----------------------------------------------------------------------------------
-function writeSpriteTilePatternToIncFile(file, tilePatternData, system, spriteSize)
+function writeRawSpriteTilePatternToIncFile(file, tilePatternData, system, spriteSize)
     
     local tileIncFile = io.open(file, "w")  
     local byteCount = 1
@@ -167,11 +167,10 @@ function writeSpriteTilePatternToIncFile(file, tilePatternData, system, spriteSi
         tileIncFile:write("\n")
         tileIncFile:write(".DB ")
         tileNum = tileNum + 1
-        
         -- Each tile is made of 32 bytes
         for tileBytes = 1, spriteSizeBytes, 1 do
             --print(tilePatternData[byteCount])
-            tileIncFile:write(tilePatternData[tile][tileBytes].." ")
+            tileIncFile:write("$" .. string.format("%02X",tilePatternData[tile][tileBytes]) .." ")
             byteCount = byteCount + 1
             
             if tileBytes % 4 == 0 and tileBytes == spriteSizeBytes / 2 and spriteSizeBytes == 64 then
@@ -184,13 +183,45 @@ function writeSpriteTilePatternToIncFile(file, tilePatternData, system, spriteSi
                 tileIncFile:write("\n")
                 tileIncFile:write(".DB ")
             end
-            
-
         end
         tileIncFile:write(" \n")
     end
-    
     tileIncFile:write("; End of file\n")
     tileIncFile:close();
+end
 
+
+----------------------------------------------------------------------------------
+-- write the Tile Pattern Data to bin files
+----------------------------------------------------------------------------------
+function writeRawSpriteTilePatternToBinFile(file, tilePatternData, system, spriteSize)
+    
+    local tileIncFile = io.open(file, "w")  
+    local byteCount = 1
+    local tileSize = 32
+    
+    -- Write the pattern data
+    local totalNumTiles = 0
+    if #tilePatternData > 448 then
+       totalNumTiles = 448
+    else
+        totalNumTiles = #tilePatternData
+    end
+
+    local spriteSizeBytes = tileSize
+    if spriteSize == "8x16 Pixels" then
+        spriteSizeBytes = 64
+    end
+
+    local tileNum = 0
+
+    for tile = 1, totalNumTiles, 1 do
+        tileNum = tileNum + 1
+        -- Each tile is made of 32 bytes
+        for tileBytes = 1, spriteSizeBytes, 1 do
+            --print(tilePatternData[byteCount])
+            tileIncFile:write(string.char(tilePatternData[tile][tileBytes]))
+            byteCount = byteCount + 1
+        end
+    end
 end

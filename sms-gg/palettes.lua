@@ -33,7 +33,7 @@ function convert32BitTo6BitColor(color)
 	smsG = smsG >> 4
 	local smsB = hexB & 0xC0
 	smsB = smsB >> 2
-	--Put them into the 15-bit word in the form XXBBGGRR
+	--Put them into the 6-bit byte in the form XXBBGGRR
 	local sms6BitColor = 0x00
 	sms6BitColor = sms6BitColor | smsB 
 	sms6BitColor = sms6BitColor | smsG 
@@ -44,9 +44,8 @@ end
 
 
 ----------------------------------------------------------------------------------------
--- Background & Sprite Shared functions
+-- Export Palette to INC file
 ----------------------------------------------------------------------------------
--- Write palette to a file
 function writePaletteToIncFile(file, systemType, currentPal)
     local paletteFile = io.open(file, "w")
     local dataSize
@@ -68,5 +67,31 @@ function writePaletteToIncFile(file, systemType, currentPal)
         end
     end
     paletteFile:write("; End of ".. systemType .. " Palette")
+    paletteFile:close();
+end
+
+
+----------------------------------------------------------------------------------------
+-- Export Palette to BIN file
+----------------------------------------------------------------------------------
+function writePaletteToBinFile(file, systemType, currentPal)
+    local paletteFile = io.open(file, "w")
+    local dataSize
+    local writeSize
+    if systemType == "SMS" then
+        dataSize = ".DB"
+        writeSize = "%02X"
+        for i = 0, 15, 1 do
+            currentColor = convert32BitTo6BitColor(currentPal:getColor(i))
+            paletteFile:write(string.char(currentColor))
+        end
+    else
+        dataSize = ".DW"
+        writeSize = "%04X"
+        for i = 0, 15, 1 do
+            currentColor = convert32BitTo12BitColor(currentPal:getColor(i))
+            paletteFile:write(string.pack(">I2", currentColor))
+        end
+    end
     paletteFile:close();
 end
