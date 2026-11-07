@@ -19,6 +19,7 @@ local newTile = 0x0001
 require("palettes")
 require("spriteTiles")
 require("bgTilesAndMaps")
+require("compressionPSRLE")
 
 
 
@@ -56,8 +57,8 @@ local function exportSprite(sprite, slices, currentPal, img)
             }
         dlg:combobox{ id="compression",
             label="Compression Algorithm",
-            option="Raw",
-            options={ "Raw" },
+            option="Phantasy Star RLE",
+            options={ "Raw", "Phantasy Star RLE" },
             }
         dlg:combobox{ id="spriteSize",
               label="Sprite Size",
@@ -99,13 +100,21 @@ local function exportSprite(sprite, slices, currentPal, img)
         -- Save the tiles to a file
         -- Write to file
         if data.fileType == "inc" then
-            writeRawSpriteTilePatternToIncFile(data.tileFile, tilePatternTable, data.systemType)
+            if data.compression == "Phantasy Star RLE" then
+                tileCompressionIncPSRLE(data.tileFile, tilePatternTable, data.systemType)
+            else
+                writeRawSpriteTilePatternToIncFile(data.tileFile, tilePatternTable, data.systemType)
+            end
             -- Save the palette file
             if data.exportPalette then
                 writePaletteToIncFile(data.paletteFile, data.systemType, currentPal)
             end
         elseif data.fileType == "bin" then
-            writeRawSpriteTilePatternToBinFile(data.tileFile, tilePatternTable, data.systemType)
+            if data.compression == "Phantasy Star RLE" then
+                tileCompressionBinPSRLE(data.tileFile, tilePatternTable)
+            else
+                writeRawSpriteTilePatternToBinFile(data.tileFile, tilePatternTable, data.systemType)
+            end
             -- Save the palette file
             if data.exportPalette then
                 writePaletteToBinFile(data.paletteFile, data.systemType, currentPal)
