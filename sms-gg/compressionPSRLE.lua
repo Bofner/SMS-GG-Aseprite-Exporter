@@ -87,7 +87,7 @@ function tileCompressionBinPSRLE(tileFile, tilePatternData)
                         tileBinFile:write(string.char(runLength))
                         for writes = 1, #nonIdenticalBytes - 1, 1 do
                         -- Don't include the previous byte, since it is identical to tilePatternData[tile][row]
-                            --tileFile:write(string.char(nonIdenticalBytes[writes]))
+                            tileFile:write(string.char(nonIdenticalBytes[writes]))
                         end
                         -- Reset variables
                         nonIdenticalBytes = nil
@@ -116,7 +116,7 @@ function tileCompressionBinPSRLE(tileFile, tilePatternData)
             tileBinFile:write(string.char(runLength))
             for writes = 1, #nonIdenticalBytes - 1, 1 do
             -- Don't include the previous byte, since it is identical to tilePatternData[tile][row]
-                --tileFile:write(string.char(nonIdenticalBytes[writes]))
+                tileFile:write(string.char(nonIdenticalBytes[writes]))
             end
             -- Reset variables
             nonIdenticalBytes = nil
@@ -166,6 +166,9 @@ function tileCompressionIncPSRLE(tileFile, tilePatternData, system)
     -- Go through each bitplane, one tile at a time to compress a single bitplane at a time
     for bitplane = 1, bitplanesPerRow, 1 do
         -- Go through each tile once per bitplane
+        tileIncFile:write("; --------------\n")
+        tileIncFile:write("; Bitplane " .. bitplane -1 .. "\n")
+        tileIncFile:write("; --------------\n")
         for tile = 1, totalNumTiles, 1 do
             -- Go through each role of pixels, compressing just a single bitplane of the row
             for row = bitplane, bitplanesPerTile, bitplanesPerRow do
@@ -173,7 +176,8 @@ function tileCompressionIncPSRLE(tileFile, tilePatternData, system)
                 if previousByte ~= nil then
                 -- Check what stage we are at in the compression                
                 -- IDENTICAL
-                    if tilePatternData[tile][row] == previousByte and currentIdenticalByte == nil then
+                    if tilePatternData[tile][row] == previousByte and currentIdenticalByte == nil 
+                    and nonIdenticalBytes == nil then
                     -- This is a NEW IDENTICAL run
                         runLength = runLength + 1
                         currentIdenticalByte = tilePatternData[tile][row]
@@ -200,8 +204,9 @@ function tileCompressionIncPSRLE(tileFile, tilePatternData, system)
                     -- This is a NEW NON-IDENTICAL run
                         runLength = runLength + 1
                         nonIdenticalBytes = {tilePatternData[tile][row]}
+                        nonIdenticalBytes = {previousByte}
                         previousByte = tilePatternData[tile][row]
-
+                        
                     elseif tilePatternData[tile][row] ~= previousByte and nonIdenticalBytes ~= nil then
                     -- This is a CONTINUING NON-IDENTICAL run
                         runLength = runLength + 1
@@ -216,7 +221,7 @@ function tileCompressionIncPSRLE(tileFile, tilePatternData, system)
                         tileIncFile:write(".DB ")
                         tileIncFile:write("$" .. string.format("%02X",runLength) .. " ")
                         byteCount = byteCount + 1
-                        for writes = 1, #nonIdenticalBytes - 1, 1 do
+                        for writes = 1, #nonIdenticalBytes, 1 do
                         -- Don't include the previous byte, since it is identical to tilePatternData[tile][row]
                             tileIncFile:write("$" .. string.format("%02X", nonIdenticalBytes[writes]) .. " ")
                             byteCount = byteCount + 1
@@ -224,14 +229,47 @@ function tileCompressionIncPSRLE(tileFile, tilePatternData, system)
                         tileIncFile:write("\n")
                         -- Reset variables
                         nonIdenticalBytes = nil
-                        currentIdenticalByte = previousByte
-                        runLength = 2
+                        previousByte = tilePatternData[tile][row]
+                        runLength = 1
                     end
                 
                 else
                 -- First loop, so set up variables
                     previousByte = tilePatternData[tile][row]
                     runLength = 1
+                end
+                -- Check if we are at compresion max
+                if runLength == 127 and currentIdenticalByte ~= nil then
+                -- End of a max-length identical run
+                    -- Record the identical run
+                    tileIncFile:write("; Identical Run\n")
+                    tileIncFile:write(".DW ")
+                    tileIncFile:write("$" .. string.format("%02X",runLength))
+                    tileIncFile:write(string.format("%02X",previousByte) .. "\n")
+                    -- Reset variables
+                    nonIdenticalBytes = nil
+                    currentIdenticalByte = nil
+                    currentIdenticalByte = nil
+                    previousByte = nil
+                    runLength = 0
+                elseif runLength == 127 and nonIdenticalBytes ~= nil then
+                    runLength = (runLength) | nonIdenticalBytesFlag       -- Set the Non-identical flag
+                    tileIncFile:write("; Non-identical Run\n")
+                    tileIncFile:write(".DB ")
+                    tileIncFile:write("$" .. string.format("%02X",runLength) .. " ")
+                    byteCount = byteCount + 1
+                    for writes = 1, #nonIdenticalBytes, 1 do
+                    -- Don't include the previous byte, since it is identical to tilePatternData[tile][row]
+                        tileIncFile:write("$" .. string.format("%02X", nonIdenticalBytes[writes]) .. " ")
+                        byteCount = byteCount + 1
+                    end
+                    tileIncFile:write("\n")
+                    -- Reset variables
+                    nonIdenticalBytes = nil
+                    currentIdenticalByte = nil
+                    currentIdenticalByte = nil
+                    previousByte = nil
+                    runLength = 0
                 end
             end
         end
@@ -243,32 +281,30 @@ function tileCompressionIncPSRLE(tileFile, tilePatternData, system)
             tileIncFile:write("$" .. string.format("%02X",runLength))
             tileIncFile:write(string.format("%02X",previousByte) .. "\n")
             byteCount = byteCount + 2
-            -- Reset Variables
-            currentIdenticalByte = nil
-            previousByte = nil
-            runLength = 1
-        else
-            runLength = runLength | nonIdenticalBytesFlag       -- Set the Non-identical flag
+        elseif nonIdenticalBytes ~= nil then
+            runLength = (runLength) | nonIdenticalBytesFlag       -- Set the Non-identical flag
             tileIncFile:write("; Non-identical Run\n")
             tileIncFile:write(".DB ")
             tileIncFile:write("$" .. string.format("%02X",runLength) .. " ")
             byteCount = byteCount + 1
-            for writes = 1, #nonIdenticalBytes - 1, 1 do
+            for writes = 1, #nonIdenticalBytes, 1 do
             -- Don't include the previous byte, since it is identical to tilePatternData[tile][row]
                 tileIncFile:write("$" .. string.format("%02X", nonIdenticalBytes[writes]) .. " ")
                 byteCount = byteCount + 1
             end
             tileIncFile:write("\n")
+        end
+        -- And the terminator byte
+            tileIncFile:write("; Terminator Byte\n")
+            tileIncFile:write(".DB ")
+            tileIncFile:write("$" .. string.format("%02X",0) .. "\n")
             -- Reset variables
             nonIdenticalBytes = nil
             currentIdenticalByte = nil
-            runLength = 2
-        end
+            currentIdenticalByte = nil
+            previousByte = nil
+            runLength = 0
     end
-    -- And the terminator byte
-    tileIncFile:write("; Terminator Byte\n")
-    tileIncFile:write(".DB ")
-    tileIncFile:write("$" .. string.format("%02X",0))
     tileIncFile:close();
     byteCount = byteCount + 1
     if byteCount < totalNumTiles * 32 then
