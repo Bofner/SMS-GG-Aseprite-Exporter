@@ -98,8 +98,9 @@ local function exportSprite(sprite, slices, currentPal, img)
         local y = 0
         recordSpriteTiles(x, y, numTiles, tilePatternTable, data.spriteSize, sprite, img)
         -- Save the tiles to a file
-        -- Write to file
+        -- Write to file as inc
         if data.fileType == "inc" then
+            -- Choose compression type
             if data.compression == "Phantasy Star RLE" then
                 tileCompressionIncPSRLE(data.tileFile, tilePatternTable, data.systemType)
             else
@@ -109,7 +110,9 @@ local function exportSprite(sprite, slices, currentPal, img)
             if data.exportPalette then
                 writePaletteToIncFile(data.paletteFile, data.systemType, currentPal)
             end
+        -- Write to file as bin
         elseif data.fileType == "bin" then
+            -- Choose compression type
             if data.compression == "Phantasy Star RLE" then
                 tileCompressionBinPSRLE(data.tileFile, tilePatternTable)
             else

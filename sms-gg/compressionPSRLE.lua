@@ -4,7 +4,7 @@
 -- We will organize the tile data by bitplanes, so bitplane 0 of every row
 -- will be grouped, bitplane 1 of every row will be grouped and so on
 -- From there, we will count the number of identical or non-identical bytes
--- in a row, using bit 7 as: 1-Identical, 0-Non-identical, for a maximum of
+-- in a row, using bit 7 as: 0-Identical, 1-Non-identical, for a maximum of
 -- 127 btyes in a row
 -- Identical bytes will be stored as $NN $bitplaneValue
 -- Non Identical bytes will be stored as $NN $bitplaneValue0 $bitplaneValue1 ... $bitplaneValueN-1
@@ -16,6 +16,7 @@
 function tileCompressionBinPSRLE(tileFile, tilePatternData)
     -- File
     local tileBinFile = io.open(tileFile, "w")
+    local byteCount = 0
     -- Bitplanes
     local bitplanesPerRow = 4                       -- Distance between bitplaneN in 2 consecutive rows
     -- Tiles
@@ -37,7 +38,6 @@ function tileCompressionBinPSRLE(tileFile, tilePatternData)
         totalNumTiles = #tilePatternData
     end
 
-
     -- Go through each bitplane, one tile at a time to compress a single bitplane at a time
     for bitplane = 1, bitplanesPerRow, 1 do
         -- Go through each tile once per bitplane
@@ -48,7 +48,8 @@ function tileCompressionBinPSRLE(tileFile, tilePatternData)
                 if previousByte ~= nil then
                 -- Check what stage we are at in the compression                
                 -- IDENTICAL
-                    if tilePatternData[tile][row] == previousByte and currentIdenticalByte == nil then
+                    if tilePatternData[tile][row] == previousByte and currentIdenticalByte == nil 
+                    and nonIdenticalBytes == nil then
                     -- This is a NEW IDENTICAL run
                         runLength = runLength + 1
                         currentIdenticalByte = tilePatternData[tile][row]
@@ -63,17 +64,19 @@ function tileCompressionBinPSRLE(tileFile, tilePatternData)
                         tileBinFile:write(string.char(runLength))
                         tileBinFile:write(string.char(previousByte))
                         -- Reset Variables
+                        byteCount = byteCount + 2
                         currentIdenticalByte = nil
                         previousByte = tilePatternData[tile][row]
                         runLength = 1
 
                     -- NON-IDENTICAL
-                    elseif tilePatternData[tile][row] ~= previousByte and nonIdenticalBytes == nil then
-                    -- This is a NEW NON-IDENTICAL run
+                    elseif tilePatternData[tile][row] ~= previousByte and nonIdenticalBytes == nil 
+                    and previousByte ~= nil then
+                    -- This is the start of a NEW NON-IDENTICAL run
                         runLength = runLength + 1
-                        nonIdenticalBytes = {tilePatternData[tile][row]}
+                        nonIdenticalBytes = {previousByte, tilePatternData[tile][row]}
                         previousByte = tilePatternData[tile][row]
-
+                        
                     elseif tilePatternData[tile][row] ~= previousByte and nonIdenticalBytes ~= nil then
                     -- This is a CONTINUING NON-IDENTICAL run
                         runLength = runLength + 1
@@ -83,22 +86,52 @@ function tileCompressionBinPSRLE(tileFile, tilePatternData)
                     elseif tilePatternData[tile][row] == previousByte and nonIdenticalBytes ~= nil and runLength < 127 then
                     -- This is the END OF A NON-IDENTICAL run
                         -- Record the non-identical run
-                        runLength = runLength | nonIdenticalBytesFlag       -- Set the Non-identical flag
+                        runLength = (runLength - 1) | nonIdenticalBytesFlag       -- Set the Non-identical flag
                         tileBinFile:write(string.char(runLength))
+                        byteCount = byteCount + 1
                         for writes = 1, #nonIdenticalBytes - 1, 1 do
                         -- Don't include the previous byte, since it is identical to tilePatternData[tile][row]
-                            tileFile:write(string.char(nonIdenticalBytes[writes]))
+                            tileBinFile:write(string.char(nonIdenticalBytes[writes]))
+                            byteCount = byteCount + 1
                         end
                         -- Reset variables
                         nonIdenticalBytes = nil
-                        currentIdenticalByte = previousByte
-                        runLength = 2
+                        previousByte = tilePatternData[tile][row]
+                        runLength = 2       -- We have hit an identical couple
                     end
                 
                 else
                 -- First loop, so set up variables
                     previousByte = tilePatternData[tile][row]
                     runLength = 1
+                end
+                -- Check if we are at compresion max
+                if runLength == 127 and currentIdenticalByte ~= nil then
+                -- End of a max-length identical run
+                    -- Record the identical run
+                    tileBinFile:write(string.char(runLength))
+                    tileBinFile:write(string.char(previousByte))
+                    -- Reset variables
+                    nonIdenticalBytes = nil
+                    currentIdenticalByte = nil
+                    currentIdenticalByte = nil
+                    previousByte = nil
+                    runLength = 0
+                elseif runLength == 127 and nonIdenticalBytes ~= nil then
+                    runLength = (runLength) | nonIdenticalBytesFlag       -- Set the Non-identical flag
+                    tileBinFile:write(string.char(runLength))
+                    byteCount = byteCount + 1
+                    for writes = 1, #nonIdenticalBytes, 1 do
+                    -- Don't include the previous byte, since it is identical to tilePatternData[tile][row]
+                        tileBinFile:write(string.char(nonIdenticalBytes[writes]))
+                        byteCount = byteCount + 1
+                    end
+                    -- Reset variables
+                    nonIdenticalBytes = nil
+                    currentIdenticalByte = nil
+                    currentIdenticalByte = nil
+                    previousByte = nil
+                    runLength = 0
                 end
             end
         end
@@ -107,28 +140,42 @@ function tileCompressionBinPSRLE(tileFile, tilePatternData)
             -- Record the identical run
             tileBinFile:write(string.char(runLength))
             tileBinFile:write(string.char(previousByte))
-            -- Reset Variables
-            currentIdenticalByte = nil
-            previousByte = nil
-            runLength = 1
-        else
-            runLength = runLength | nonIdenticalBytesFlag       -- Set the Non-identical flag
+            byteCount = byteCount + 2
+        elseif nonIdenticalBytes ~= nil then
+            runLength = (runLength) | nonIdenticalBytesFlag       -- Set the Non-identical flag
             tileBinFile:write(string.char(runLength))
-            for writes = 1, #nonIdenticalBytes - 1, 1 do
+            byteCount = byteCount + 1
+            for writes = 1, #nonIdenticalBytes, 1 do
             -- Don't include the previous byte, since it is identical to tilePatternData[tile][row]
-                tileFile:write(string.char(nonIdenticalBytes[writes]))
+                tileBinFile:write(string.char(nonIdenticalBytes[writes]))
+                byteCount = byteCount + 1
             end
+        elseif runLength == 1 then
+            -- We reached the end of the bitplane with a runLength of only 1
+            -- Treat this as non-identical
+            runLength = (runLength) | nonIdenticalBytesFlag
+            tileBinFile:write(string.char(runLength))
+            tileBinFile:write(string.char(previousByte))
+        end
+        -- And the terminator byte
+            tileBinFile:write(string.char(0))
             -- Reset variables
             nonIdenticalBytes = nil
             currentIdenticalByte = nil
-            runLength = 2
-        end
+            currentIdenticalByte = nil
+            previousByte = nil
+            runLength = 0
     end
-    -- And the terminator byte
-    tileBinFile:write(string.char(0))
     tileBinFile:close();
+    byteCount = byteCount + 1
+    if byteCount < totalNumTiles * 32 then
+        print("Success!\n" .. "File size reduced from " .. totalNumTiles * 32 .. " bytes to " .. byteCount .. " bytes!")
+    elseif byteCount == totalNumTiles * 32 then
+        print("No change!\n" .. "Raw file size and compressed file size are " .. byteCount .. " bytes!")
+    else
+        print("Uh oh!\n" .. "File size increased from " .. totalNumTiles * 32 .. " bytes to " .. byteCount .. " bytes!\n Consider exporting as raw data.")
+    end
 end
-
 
 
 ----------------------------------------------------------------------------------
@@ -146,7 +193,7 @@ function tileCompressionIncPSRLE(tileFile, tilePatternData, system)
     local bitplanesPerTile = tileSizeRows * bitplanesPerRow
     local totalNumTiles = 0
     -- Compression
-    local runLength = nil
+    local runLength = 0
     local previousByteValue = nil                   -- Value of the previous byte
     local currentIdenticalByte = nil                  -- Value of the Current Identical Byte in the run
     local nonIdenticalBytes = nil                    -- Array to hold the list of Non-identical byte runs
@@ -200,11 +247,11 @@ function tileCompressionIncPSRLE(tileFile, tilePatternData, system)
                         runLength = 1
 
                     -- NON-IDENTICAL
-                    elseif tilePatternData[tile][row] ~= previousByte and nonIdenticalBytes == nil then
-                    -- This is a NEW NON-IDENTICAL run
+                    elseif tilePatternData[tile][row] ~= previousByte and nonIdenticalBytes == nil 
+                    and previousByte ~= nil then
+                    -- This is the start of a NEW NON-IDENTICAL run
                         runLength = runLength + 1
-                        nonIdenticalBytes = {tilePatternData[tile][row]}
-                        nonIdenticalBytes = {previousByte}
+                        nonIdenticalBytes = {previousByte, tilePatternData[tile][row]}
                         previousByte = tilePatternData[tile][row]
                         
                     elseif tilePatternData[tile][row] ~= previousByte and nonIdenticalBytes ~= nil then
@@ -216,12 +263,12 @@ function tileCompressionIncPSRLE(tileFile, tilePatternData, system)
                     elseif tilePatternData[tile][row] == previousByte and nonIdenticalBytes ~= nil and runLength < 127 then
                     -- This is the END OF A NON-IDENTICAL run
                         -- Record the non-identical run
-                        runLength = runLength | nonIdenticalBytesFlag       -- Set the Non-identical flag
+                        runLength = (runLength - 1) | nonIdenticalBytesFlag       -- Set the Non-identical flag
                         tileIncFile:write("; Non-identical Run\n")
                         tileIncFile:write(".DB ")
                         tileIncFile:write("$" .. string.format("%02X",runLength) .. " ")
                         byteCount = byteCount + 1
-                        for writes = 1, #nonIdenticalBytes, 1 do
+                        for writes = 1, #nonIdenticalBytes - 1, 1 do
                         -- Don't include the previous byte, since it is identical to tilePatternData[tile][row]
                             tileIncFile:write("$" .. string.format("%02X", nonIdenticalBytes[writes]) .. " ")
                             byteCount = byteCount + 1
@@ -230,7 +277,7 @@ function tileCompressionIncPSRLE(tileFile, tilePatternData, system)
                         -- Reset variables
                         nonIdenticalBytes = nil
                         previousByte = tilePatternData[tile][row]
-                        runLength = 1
+                        runLength = 2       -- We have hit an identical couple
                     end
                 
                 else
@@ -293,6 +340,14 @@ function tileCompressionIncPSRLE(tileFile, tilePatternData, system)
                 byteCount = byteCount + 1
             end
             tileIncFile:write("\n")
+        elseif runLength == 1 then
+            -- We reached the end of the bitplane with a runLength of only 1
+            -- Treat this as non-identical
+            runLength = (runLength) | nonIdenticalBytesFlag
+            tileIncFile:write("; Non-identical Run\n")
+            tileIncFile:write(".DB ")
+            tileIncFile:write("$" .. string.format("%02X",runLength) .. " ")
+            tileIncFile:write("$" .. string.format("%02X", previousByte) .. "\n")
         end
         -- And the terminator byte
             tileIncFile:write("; Terminator Byte\n")
@@ -308,8 +363,10 @@ function tileCompressionIncPSRLE(tileFile, tilePatternData, system)
     tileIncFile:close();
     byteCount = byteCount + 1
     if byteCount < totalNumTiles * 32 then
-        print("Success!\n File size reduced from " .. totalNumTiles * 32 .. " bytes to " .. byteCount .. " bytes!")
+        print("Success!\n" .. "File size reduced from " .. totalNumTiles * 32 .. " bytes to " .. byteCount .. " bytes!")
+    elseif byteCount == totalNumTiles * 32 then
+        print("No change!\n" .. "Raw file size and compressed file size are " .. byteCount .. " bytes!")
     else
-        print("Uh oh!\n File size increased from " .. totalNumTiles * 32 .. " bytes to " .. byteCount .. " bytes!\n Consider exporting as raw data.")
+        print("Uh oh!\n" .. "File size increased from " .. totalNumTiles * 32 .. " bytes to " .. byteCount .. " bytes!\n Consider exporting as raw data.")
     end
 end
