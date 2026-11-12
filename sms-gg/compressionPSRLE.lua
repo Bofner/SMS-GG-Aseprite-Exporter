@@ -277,6 +277,7 @@ function tileCompressionIncPSRLE(tileFile, tilePatternData, system)
                         -- Reset variables
                         nonIdenticalBytes = nil
                         previousByte = tilePatternData[tile][row]
+                        currentIdenticalByte = previousByte
                         runLength = 2       -- We have hit an identical couple
                     end
                 
@@ -305,7 +306,7 @@ function tileCompressionIncPSRLE(tileFile, tilePatternData, system)
                     tileIncFile:write(".DB ")
                     tileIncFile:write("$" .. string.format("%02X",runLength) .. " ")
                     byteCount = byteCount + 1
-                    for writes = 1, #nonIdenticalBytes, 1 do
+                    for writes = 1, runLength, 1 do
                     -- Don't include the previous byte, since it is identical to tilePatternData[tile][row]
                         tileIncFile:write("$" .. string.format("%02X", nonIdenticalBytes[writes]) .. " ")
                         byteCount = byteCount + 1
