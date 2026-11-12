@@ -237,9 +237,9 @@ function tileCompressionIncPSRLE(tileFile, tilePatternData, system)
                     -- This is the END OF AN IDENTICAL run
                         -- Record the identical run
                         tileIncFile:write("; Identical Run\n")
-                        tileIncFile:write(".DW ")
-                        tileIncFile:write("$" .. string.format("%02X",runLength))
-                        tileIncFile:write(string.format("%02X",previousByte) .. "\n")
+                        tileIncFile:write(".DB ")
+                        tileIncFile:write("$" .. string.format("%02X",runLength) .. " ")
+                        tileIncFile:write("$" .. string.format("%02X",previousByte) .. "\n")
                         -- Reset Variables
                         byteCount = byteCount + 2
                         currentIdenticalByte = nil
@@ -290,9 +290,9 @@ function tileCompressionIncPSRLE(tileFile, tilePatternData, system)
                 -- End of a max-length identical run
                     -- Record the identical run
                     tileIncFile:write("; Identical Run\n")
-                    tileIncFile:write(".DW ")
-                    tileIncFile:write("$" .. string.format("%02X",runLength))
-                    tileIncFile:write(string.format("%02X",previousByte) .. "\n")
+                    tileIncFile:write(".DB ")
+                    tileIncFile:write("$" .. string.format("%02X",runLength) .. " ")
+                    tileIncFile:write("$" .. string.format("%02X",previousByte) .. "\n")
                     -- Reset variables
                     nonIdenticalBytes = nil
                     currentIdenticalByte = nil
@@ -324,9 +324,9 @@ function tileCompressionIncPSRLE(tileFile, tilePatternData, system)
         if currentIdenticalByte ~= nil then
             -- Record the identical run
             tileIncFile:write("; Identical Run\n")
-            tileIncFile:write(".DW ")
-            tileIncFile:write("$" .. string.format("%02X",runLength))
-            tileIncFile:write(string.format("%02X",previousByte) .. "\n")
+            tileIncFile:write(".DB ")
+            tileIncFile:write("$" .. string.format("%02X",runLength) .. " ")
+            tileIncFile:write("$" .. string.format("%02X",previousByte) .. "\n")
             byteCount = byteCount + 2
         elseif nonIdenticalBytes ~= nil then
             runLength = (runLength) | nonIdenticalBytesFlag       -- Set the Non-identical flag
@@ -442,9 +442,9 @@ function mapCompressionIncPSRLE(mapFile, mapData, system)
                     -- This is the END OF AN IDENTICAL run
                         -- Record the identical run
                         mapIncFile:write("; Identical Run\n")
-                        mapIncFile:write(".DW ")
-                        mapIncFile:write("$" .. string.format("%02X",runLength))
-                        mapIncFile:write(string.format("%02X",previousByte) .. "\n")
+                        mapIncFile:write(".DB ")
+                        mapIncFile:write("$" .. string.format("%02X",runLength) .. " ")
+                        mapIncFile:write("$" .. string.format("%02X",previousByte) .. "\n")
                         -- Reset Variables
                         byteCount = byteCount + 2
                         currentIdenticalByte = nil
@@ -495,9 +495,9 @@ function mapCompressionIncPSRLE(mapFile, mapData, system)
                 -- End of a max-length identical run
                     -- Record the identical run
                     mapIncFile:write("; Identical Run\n")
-                    mapIncFile:write(".DW ")
-                    mapIncFile:write("$" .. string.format("%02X",runLength))
-                    mapIncFile:write(string.format("%02X",previousByte) .. "\n")
+                    mapIncFile:write(".DB ")
+                        mapIncFile:write("$" .. string.format("%02X",runLength) .. " ")
+                        mapIncFile:write("$" .. string.format("%02X",previousByte) .. "\n")
                     -- Reset variables
                     nonIdenticalBytes = nil
                     currentIdenticalByte = nil
@@ -528,9 +528,9 @@ function mapCompressionIncPSRLE(mapFile, mapData, system)
         if currentIdenticalByte ~= nil then
             -- Record the identical run
             mapIncFile:write("; Identical Run\n")
-            mapIncFile:write(".DW ")
-            mapIncFile:write("$" .. string.format("%02X",runLength))
-            mapIncFile:write(string.format("%02X",previousByte) .. "\n")
+            mapIncFile:write(".DB ")
+            mapIncFile:write("$" .. string.format("%02X",runLength) .. " ")
+            mapIncFile:write("$" .. string.format("%02X",previousByte) .. "\n")
             byteCount = byteCount + 2
         elseif nonIdenticalBytes ~= nil then
             runLength = (runLength) | nonIdenticalBytesFlag       -- Set the Non-identical flag
