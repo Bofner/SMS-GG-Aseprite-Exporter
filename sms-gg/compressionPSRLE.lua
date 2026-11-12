@@ -387,7 +387,7 @@ function mapCompressionIncPSRLE(mapFile, mapData, system)
     -- Maps
     local attributeByte = 0xFF00                    -- Mask for Attribute byte
     local patternByte = 0x00FF                      -- Mask for Pattern byte
-    local bitShift = 8                              -- How many bits to shift by
+    local bitShift = 0                              -- How many bits to shift by
     -- Compression
     local runLength = 0
     local previousByteValue = nil                   -- Value of the previous byte
@@ -416,7 +416,6 @@ function mapCompressionIncPSRLE(mapFile, mapData, system)
         end
         
         for tile = 1, totalNumTiles, 1 do
-            -- Go through each role of pixels, compressing just a single bitplane of the row
                 -- Adjusts the Attribute byte, but keeps the Pattern byte the same
                 local testByte 
                 if bitShift == 8 then
@@ -564,7 +563,7 @@ function mapCompressionIncPSRLE(mapFile, mapData, system)
             currentIdenticalByte = nil
             previousByte = nil
             runLength = 0
-            bitShift = 0
+            bitShift = 8
     end
     mapIncFile:close();
     byteCount = byteCount + 1
