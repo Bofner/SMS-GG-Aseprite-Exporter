@@ -370,3 +370,208 @@ function tileCompressionIncPSRLE(tileFile, tilePatternData, system)
         print("Uh oh!\n" .. "File size increased from " .. totalNumTiles * 32 .. " bytes to " .. byteCount .. " bytes!\n Consider exporting as raw data.")
     end
 end
+
+
+----------------------------------------------------------------------------------
+-- Applies Phantasy Star RLE Compression to map data as an inc file
+----------------------------------------------------------------------------------
+function mapCompressionIncPSRLE(mapFile, mapData, system)
+    -- File
+    local mapIncFile = io.open(mapFile, "w")
+    local byteCount = 0
+    -- Bitplanes
+    local likeByteDistance = 2                       -- Distance between two Like-bytes in the map (ATRIB or INDEX)
+    -- Tiles
+    local totalNumTiles = 0
+    -- Maps
+    local attributeByte = 0xFF00                    -- Mask for Attribute byte
+    local patternByte = 0x00FF                      -- Mask for Pattern byte
+    local bitShift = 8                              -- How many bits to shift by
+    -- Compression
+    local runLength = 0
+    local previousByteValue = nil                   -- Value of the previous byte
+    local currentIdenticalByte = nil                  -- Value of the Current Identical Byte in the run
+    local nonIdenticalBytes = nil                    -- Array to hold the list of Non-identical byte runs
+    local nonIdenticalBytesFlag = 0x80              -- Flag for Non-identical bytes
+    
+    totalNumTiles = #mapData
+
+
+    -- Comments in INC file
+    mapIncFile:write("; PSRLE Compressed Map for " .. system .. " Z80 Assembly programs\n")
+    mapIncFile:write("; By Steelfinger Studios\n")
+
+    -- Go through the Attribute byte and then Index byte, one tile at a time to compress one Like-byte at a time
+    for likeBytes = 1, likeByteDistance, 1 do
+        -- Go through each tile once per bitplane
+        if bitShift == 8 then
+            mapIncFile:write("; -----------------\n")
+            mapIncFile:write("; Attribute Bytes" .. "\n")
+            mapIncFile:write("; -----------------\n")
+        elseif bitShift == 0 then
+            mapIncFile:write("; -----------------\n")
+            mapIncFile:write("; Pattern Bytes" .. "\n")
+            mapIncFile:write("; -----------------\n")
+        end
+        
+        for tile = 1, totalNumTiles, 1 do
+            -- Go through each role of pixels, compressing just a single bitplane of the row
+                -- Adjusts the Attribute byte, but keeps the Pattern byte the same
+                local testByte 
+                if bitShift == 8 then
+                    testByte = mapData[tile] >> bitShift
+                else
+                    testByte = mapData[tile] & 0x00FF
+                end
+                
+                -- Check if this is a new run
+                if previousByte ~= nil then
+                -- Check what stage we are at in the compression                
+                -- IDENTICAL
+                    if testByte == previousByte and currentIdenticalByte == nil 
+                    and nonIdenticalBytes == nil then
+                    -- This is a NEW IDENTICAL run
+                        runLength = runLength + 1
+                        currentIdenticalByte = testByte
+
+                    elseif testByte == previousByte and currentIdenticalByte ~= nil then
+                    -- This is a CONTINUING IDENTICAL run
+                        runLength = runLength + 1
+
+                    elseif testByte ~= previousByte and currentIdenticalByte ~= nil then
+                    -- This is the END OF AN IDENTICAL run
+                        -- Record the identical run
+                        mapIncFile:write("; Identical Run\n")
+                        mapIncFile:write(".DW ")
+                        mapIncFile:write("$" .. string.format("%02X",runLength))
+                        mapIncFile:write(string.format("%02X",previousByte) .. "\n")
+                        -- Reset Variables
+                        byteCount = byteCount + 2
+                        currentIdenticalByte = nil
+                        previousByte = testByte
+                        runLength = 1
+
+                    -- NON-IDENTICAL
+                    elseif testByte ~= previousByte and nonIdenticalBytes == nil 
+                    and previousByte ~= nil then
+                    -- This is the start of a NEW NON-IDENTICAL run
+                        runLength = runLength + 1
+                        nonIdenticalBytes = {previousByte, testByte}
+                        previousByte = testByte
+                        
+                    elseif testByte ~= previousByte and nonIdenticalBytes ~= nil then
+                    -- This is a CONTINUING NON-IDENTICAL run
+                        runLength = runLength + 1
+                        nonIdenticalBytes[#nonIdenticalBytes + 1] = testByte
+                        previousByte = testByte
+
+                    elseif testByte == previousByte and nonIdenticalBytes ~= nil and runLength < 127 then
+                    -- This is the END OF A NON-IDENTICAL run
+                        -- Record the non-identical run
+                        runLength = (runLength - 1) | nonIdenticalBytesFlag       -- Set the Non-identical flag
+                        mapIncFile:write("; Non-identical Run\n")
+                        mapIncFile:write(".DB ")
+                        mapIncFile:write("$" .. string.format("%02X",runLength) .. " ")
+                        byteCount = byteCount + 1
+                        for writes = 1, #nonIdenticalBytes - 1, 1 do
+                        -- Don't include the previous byte, since it is identical to testByte
+                            mapIncFile:write("$" .. string.format("%02X", nonIdenticalBytes[writes]) .. " ")
+                            byteCount = byteCount + 1
+                        end
+                        mapIncFile:write("\n")
+                        -- Reset variables
+                        nonIdenticalBytes = nil
+                        previousByte = testByte
+                        runLength = 2       -- We have hit an identical couple
+                    end
+                
+                else
+                -- First loop, so set up variables
+                    previousByte = testByte
+                    runLength = 1
+                end
+                -- Check if we are at compresion max
+                if runLength == 127 and currentIdenticalByte ~= nil then
+                -- End of a max-length identical run
+                    -- Record the identical run
+                    mapIncFile:write("; Identical Run\n")
+                    mapIncFile:write(".DW ")
+                    mapIncFile:write("$" .. string.format("%02X",runLength))
+                    mapIncFile:write(string.format("%02X",previousByte) .. "\n")
+                    -- Reset variables
+                    nonIdenticalBytes = nil
+                    currentIdenticalByte = nil
+                    currentIdenticalByte = nil
+                    previousByte = nil
+                    runLength = 0
+                elseif runLength == 127 and nonIdenticalBytes ~= nil then
+                    runLength = (runLength) | nonIdenticalBytesFlag       -- Set the Non-identical flag
+                    mapIncFile:write("; Non-identical Run\n")
+                    mapIncFile:write(".DB ")
+                    mapIncFile:write("$" .. string.format("%02X",runLength) .. " ")
+                    byteCount = byteCount + 1
+                    for writes = 1, #nonIdenticalBytes, 1 do
+                    -- Don't include the previous byte, since it is identical to testByte
+                        mapIncFile:write("$" .. string.format("%02X", nonIdenticalBytes[writes]) .. " ")
+                        byteCount = byteCount + 1
+                    end
+                    mapIncFile:write("\n")
+                    -- Reset variables
+                    nonIdenticalBytes = nil
+                    currentIdenticalByte = nil
+                    currentIdenticalByte = nil
+                    previousByte = nil
+                    runLength = 0
+                end
+        end
+        -- Reached the end of a bitplane
+        if currentIdenticalByte ~= nil then
+            -- Record the identical run
+            mapIncFile:write("; Identical Run\n")
+            mapIncFile:write(".DW ")
+            mapIncFile:write("$" .. string.format("%02X",runLength))
+            mapIncFile:write(string.format("%02X",previousByte) .. "\n")
+            byteCount = byteCount + 2
+        elseif nonIdenticalBytes ~= nil then
+            runLength = (runLength) | nonIdenticalBytesFlag       -- Set the Non-identical flag
+            mapIncFile:write("; Non-identical Run\n")
+            mapIncFile:write(".DB ")
+            mapIncFile:write("$" .. string.format("%02X",runLength) .. " ")
+            byteCount = byteCount + 1
+            for writes = 1, #nonIdenticalBytes, 1 do
+            -- Don't include the previous byte, since it is identical to testByte
+                mapIncFile:write("$" .. string.format("%02X", nonIdenticalBytes[writes]) .. " ")
+                byteCount = byteCount + 1
+            end
+            mapIncFile:write("\n")
+        elseif runLength == 1 then
+            -- We reached the end of the bitplane with a runLength of only 1
+            -- Treat this as non-identical
+            runLength = (runLength) | nonIdenticalBytesFlag
+            mapIncFile:write("; Non-identical Run\n")
+            mapIncFile:write(".DB ")
+            mapIncFile:write("$" .. string.format("%02X",runLength) .. " ")
+            mapIncFile:write("$" .. string.format("%02X", previousByte) .. "\n")
+        end
+        -- And the terminator byte
+            mapIncFile:write("; Terminator Byte\n")
+            mapIncFile:write(".DB ")
+            mapIncFile:write("$" .. string.format("%02X",0) .. "\n")
+            -- Reset variables
+            nonIdenticalBytes = nil
+            currentIdenticalByte = nil
+            currentIdenticalByte = nil
+            previousByte = nil
+            runLength = 0
+            bitShift = 0
+    end
+    mapIncFile:close();
+    byteCount = byteCount + 1
+    if byteCount < totalNumTiles * 32 then
+        print("Success!\n" .. "File size reduced from " .. totalNumTiles * 32 .. " bytes to " .. byteCount .. " bytes!")
+    elseif byteCount == totalNumTiles * 32 then
+        print("No change!\n" .. "Raw file size and compressed file size are " .. byteCount .. " bytes!")
+    else
+        print("Uh oh!\n" .. "File size increased from " .. totalNumTiles * 32 .. " bytes to " .. byteCount .. " bytes!\n Consider exporting as raw data.")
+    end
+end

@@ -164,8 +164,8 @@ local function exportBackground(sprite, slices, currentPal, img)
             }
         dlg:combobox{ id="compression",
             label="Compression Algorithm",
-            option="Raw",
-            options={ "Raw" },
+            option="Phantasy Star RLE",
+            options={ "Phantasy Star RLE", "Raw" },
             }
         dlg:number{ id="tileOffsetValue", label="Tile Offset (Decimal)", text="0", value=0, min = 0, max=255}
         dlg:file{ id="tileFile",
@@ -217,13 +217,21 @@ local function exportBackground(sprite, slices, currentPal, img)
         recordTiles(x, y, numTiles, tilePatternTable, tilePatternTableHori, tilePatternTableVert, tilePatternTableHV, data.tileOffsetValue, tileMapTable, slices, img)
         -- Save the tiles to a file
         -- Write to file
+        -- INC file
         if data.fileType == "inc" then
-            writeRawTilePatternToIncFile(data.tileFile, tilePatternTable, data.systemType)
-            writeRawTileMapToIncFile(data.mapFile, tileMapTable, data.systemType)
+            -- COMPRESSION
+            if data.compression == "Phantasy Star RLE" then
+                tileCompressionIncPSRLE(data.tileFile, tilePatternTable, data.systemType)
+                mapCompressionIncPSRLE(data.mapFile, tileMapTable, data.systemType)
+            else
+                writeRawTilePatternToIncFile(data.tileFile, tilePatternTable, data.systemType)
+                writeRawTileMapToIncFile(data.mapFile, tileMapTable, data.systemType)
+            end
             -- Save the palette file
             if data.exportPalette then
                 writePaletteToIncFile(data.paletteFile, data.systemType, currentPal)
             end
+        -- BIN file
         elseif data.fileType == "bin" then
             writeRawTilePatternToBinFile(data.tileFile, tilePatternTable, data.systemType)
             writeRawTileMapToBinFile(data.mapFile, tileMapTable, data.systemType)
