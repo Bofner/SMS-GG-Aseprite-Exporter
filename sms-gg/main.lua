@@ -44,6 +44,16 @@ local function exportSprite(sprite, slices, currentPal, img)
             local paletteBase = app.fs.filePathAndTitle(data.paletteFile)
             dlg:modify{ id="paletteFile", filename = paletteBase .. "." .. data.fileType }
         end
+        -- Enables the Header Word option only when PSRLE is selected
+        local function updateHeaderWord()
+            local data = dlg.data
+            local compression = app.fs.filePathAndTitle(data.compression)
+            if dlg.compression == "Phantasy Star RLE" then
+                dlg:modify{ id="writeHeaderWord", enabled = true }
+            else
+                dlg:modify{ id="writeHeaderWord", enabled = false }
+            end
+        end
         dlg:combobox{ id="systemType",
             label="System Type",
             option="SMS",
@@ -85,6 +95,10 @@ local function exportSprite(sprite, slices, currentPal, img)
             text="Export Palette",
             selected=false
         }
+        dlg:check{ id="writeHeaderWord",
+            text="Write Header Word For RAW Size",
+            enabled=false,
+            selected=false}
         dlg:button{ id="ok", text="OK", focus = true}
         dlg:button{ id="cancel", text="Cancel"}
         dlg:show()
@@ -151,6 +165,16 @@ local function exportBackground(sprite, slices, currentPal, img)
             local paletteBase = app.fs.filePathAndTitle(data.paletteFile)
             dlg:modify{ id="paletteFile", filename = paletteBase .. "." .. data.fileType }
         end
+        -- Enables the Header Word option only when PSRLE is selected
+        local function updateHeaderWord()
+            local data = dlg.data
+            local compression = app.fs.filePathAndTitle(data.compression)
+            if data.compression == "Phantasy Star RLE" then
+                dlg:modify{ id="writeHeaderWord", enabled = true }
+            else
+                dlg:modify{ id="writeHeaderWord", enabled = false }
+            end
+        end
         dlg:combobox{ id="systemType",
             label="System Type",
             option="SMS",
@@ -166,6 +190,7 @@ local function exportBackground(sprite, slices, currentPal, img)
             label="Compression Algorithm",
             option="Phantasy Star RLE",
             options={ "Phantasy Star RLE", "Raw" },
+            onchange= updateHeaderWord
             }
         dlg:number{ id="tileOffsetValue", label="Tile Offset (Decimal)", text="0", value=0, min = 0, max=255}
         dlg:file{ id="tileFile",
@@ -191,6 +216,10 @@ local function exportBackground(sprite, slices, currentPal, img)
                 filetypes={"inc","bin"}}
         dlg:check{ id="exportPalette",
             text="Export Palette",
+            selected=false}
+        dlg:check{ id="writeHeaderWord",
+            text="Write Header Word For RAW Size",
+            enabled=true,
             selected=false}
         
         dlg:button{ id="ok", text="OK", focus = true  }
@@ -302,7 +331,7 @@ local function graphicsExport()
     for currentSlice = 1, #slices, 1 do
             if #slices[currentSlice].data < 5 then
             local dlg = Dialog{title = "Slice data formatting incorrect!"}
-            dlg:label{ 	id    = "sliceError",
+            dlg:label{  id    = "sliceError",
                         label = "Warning!",
                         text  = " Please set first five characters of the slice at (" .. slices[currentSlice].bounds.x .. "," .. slices[currentSlice].bounds.y .. ")" .. " to the desired bits (i.e. 10010)" }
             dlg:button{ id="cancel", text="Okay" }
@@ -321,7 +350,7 @@ local function graphicsExport()
     -- More colors than allowed by the hardware is a No-no
     if currentPalNumColors > 16 then
         local dlg = Dialog{title = "VDP color limit exceeded!"}
-        dlg:label{ 	id    = "manyColors",
+        dlg:label{  id    = "manyColors",
                     label = "Warning!",
                     text  = "Only the first 16 colors in the palette will be used!" }
         dlg:button{ id="continue", text="Continue" }
@@ -399,4 +428,3 @@ function init(plugin)
     onclick = graphicsExport
   }
 end
-
