@@ -19,7 +19,8 @@ local newTile = 0x0001
 require("palettes")
 require("spriteTiles")
 require("bgTilesAndMaps")
-require("compressionPSRLE")
+require("tileCompressionPSRLE")
+require("mapCompressionPSRLE")
 
 
 
@@ -114,12 +115,25 @@ local function exportSprite(sprite, slices, currentPal, img)
         -- Save the tiles to a file
         -- Write to file as inc
         if data.fileType == "inc" then
+            -- Write to file
+            local tileFileSize = 0
             -- Choose compression type
             if data.compression == "Phantasy Star RLE" then
-                tileCompressionIncPSRLE(data.tileFile, tilePatternTable, data.systemType, data.writeHeaderWord)
+                tileFileSize = tileCompressionIncPSRLE(data.tileFile, tilePatternTable, data.systemType, data.writeHeaderWord)
+                -- Tile File Size
+                local tileMessage
+                if tileFileSize < #tilePatternTable * 32 then
+                    tileMessage = "Success! " .. "Tile File size reduced from " .. #tilePatternTable * 32 .. " bytes to " .. tileFileSize .. " bytes!"
+                elseif tileFileSize == #tilePatternTable * 32 then
+                    tileMessage = "No change! " .. "Raw file size and compressed file size are " .. tileFileSize .. " bytes!"
+                else
+                    tileMessage = "Uh oh! " .. "File size increased from " .. #tilePatternTable * 32 .. " bytes to " .. tileFileSize .. " bytes! Consider exporting as raw data."
+                end
+                app.alert{title="Compression Result", text={tileMessage}}
             else
                 writeRawSpriteTilePatternToIncFile(data.tileFile, tilePatternTable, data.systemType)
             end
+            
             -- Save the palette file
             if data.exportPalette then
                 writePaletteToIncFile(data.paletteFile, data.systemType, currentPal)
@@ -128,7 +142,17 @@ local function exportSprite(sprite, slices, currentPal, img)
         elseif data.fileType == "bin" then
             -- Choose compression type
             if data.compression == "Phantasy Star RLE" then
-                tileCompressionBinPSRLE(data.tileFile, tilePatternTable, data.writeHeaderWord)
+                tileFileSize =tileCompressionBinPSRLE(data.tileFile, tilePatternTable, data.writeHeaderWord)
+                -- Tile File Size
+                local tileMessage
+                if tileFileSize < #tilePatternTable * 32 then
+                    tileMessage = "Success! " .. "Tile File size reduced from " .. #tilePatternTable * 32 .. " bytes to " .. tileFileSize .. " bytes!"
+                elseif tileFileSize == #tilePatternTable * 32 then
+                    tileMessage = "No change! " .. "Raw file size and compressed file size are " .. tileFileSize .. " bytes!"
+                else
+                    tileMessage = "Uh oh! " .. "File size increased from " .. #tilePatternTable * 32 .. " bytes to " .. tileFileSize .. " bytes! Consider exporting as raw data."
+                end
+                app.alert{title="Compression Result", text={tileMessage}}
             else
                 writeRawSpriteTilePatternToBinFile(data.tileFile, tilePatternTable, data.systemType)
             end
@@ -281,13 +305,35 @@ local function exportBackground(sprite, slices, currentPal, img)
             if data.exportPalette then
                 writePaletteToIncFile(data.paletteFile, data.systemType, currentPal)
             end
-            
-
 
         -- BIN file
         elseif data.fileType == "bin" then
-            writeRawTilePatternToBinFile(data.tileFile, tilePatternTable, data.systemType, data.writeHeaderWord)
-            writeRawTileMapToBinFile(data.mapFile, tileMapTable, data.systemType, data.writeHeaderWord)
+            if data.compression == "Phantasy Star RLE" then
+                tileFileSize = tileCompressionBinPSRLE(data.tileFile, tilePatternTable, data.systemType, data.writeHeaderWord)
+                mapFileSize = mapCompressionBinPSRLE(data.mapFile, tileMapTable, data.systemType, data.writeHeaderWord)
+                -- Tile File Size
+                local tileMessage
+                if tileFileSize < #tilePatternTable * 32 then
+                    tileMessage = "Success! " .. "Tile File size reduced from " .. #tilePatternTable * 32 .. " bytes to " .. tileFileSize .. " bytes!"
+                elseif tileFileSize == #tilePatternTable * 32 then
+                    tileMessage = "No change! " .. "Raw file size and compressed file size are " .. tileFileSize .. " bytes!"
+                else
+                    tileMessage = "Uh oh! " .. "File size increased from " .. #tilePatternTable * 32 .. " bytes to " .. tileFileSize .. " bytes! Consider exporting as raw data."
+                end
+                -- Map File Size
+                local mapMessage
+                if mapFileSize < #tileMapTable * 2 then
+                    mapMessage = "Success! " .. "Tile File size reduced from " .. #tileMapTable * 2 .. " bytes to " .. mapFileSize .. " bytes!"
+                elseif mapFileSize == #tileMapTable * 2 then
+                    mapMessage = "No change! " .. "Raw file size and compressed file size are " .. mapFileSize .. " bytes!"
+                else
+                    mapMessage = "Uh oh! " .. "File size increased from " .. #tileMapTable * 2 .. " bytes to " .. mapFileSize .. " bytes! Consider exporting as raw data."
+                end
+                app.alert{title="Compression Result", text={tileMessage, mapMessage}}
+            else
+                writeRawTilePatternToBinFile(data.tileFile, tilePatternTable, data.systemType)
+                writeRawTileMapToBinFile(data.mapFile, tileMapTable, data.systemType)
+            end
             -- Save the palette file
             if data.exportPalette then
                 writePaletteToBinFile(data.paletteFile, data.systemType, currentPal)
