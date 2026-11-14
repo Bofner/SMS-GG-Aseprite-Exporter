@@ -13,7 +13,7 @@
 ----------------------------------------------------------------------------------
 -- Applies Phantasy Star RLE Compression to tile data as a bin file
 ----------------------------------------------------------------------------------
-function tileCompressionBinPSRLE(tileFile, tilePatternData)
+function tileCompressionBinPSRLE(tileFile, tilePatternData, writeHeader)
     -- File
     local tileBinFile = io.open(tileFile, "w")
     local byteCount = 0
@@ -181,7 +181,7 @@ end
 ----------------------------------------------------------------------------------
 -- Applies Phantasy Star RLE Compression to tile data as a inc file
 ----------------------------------------------------------------------------------
-function tileCompressionIncPSRLE(tileFile, tilePatternData, system)
+function tileCompressionIncPSRLE(tileFile, tilePatternData, system, writeHeader)
     -- File
     local tileIncFile = io.open(tileFile, "w")
     local byteCount = 0
@@ -198,6 +198,7 @@ function tileCompressionIncPSRLE(tileFile, tilePatternData, system)
     local currentIdenticalByte = nil                  -- Value of the Current Identical Byte in the run
     local nonIdenticalBytes = nil                    -- Array to hold the list of Non-identical byte runs
     local nonIdenticalBytesFlag = 0x80              -- Flag for Non-identical bytes
+    local headerSize = 0
     
     -- Don't write more tiles than will fit in VRAM proper
     if #tilePatternData > 448 then
@@ -209,6 +210,13 @@ function tileCompressionIncPSRLE(tileFile, tilePatternData, system)
     -- Comments in INC file
     tileIncFile:write("; PSRLE Compressed Tiles for " .. system .. " Z80 Assembly programs\n")
     tileIncFile:write("; By Steelfinger Studios\n")
+    if writeHeader == true then
+        tileIncFile:write("; -----------------\n")
+        tileIncFile:write("; Raw Size Header" .. "\n")
+        tileIncFile:write("; -----------------\n")
+        tileIncFile:write(".DW $" .. string.format("%04X", totalNumTiles * 32) .. "\n")
+        headerSize = 2
+    end
 
     -- Go through each bitplane, one tile at a time to compress a single bitplane at a time
     for bitplane = 1, bitplanesPerRow, 1 do
@@ -362,21 +370,15 @@ function tileCompressionIncPSRLE(tileFile, tilePatternData, system)
             runLength = 0
     end
     tileIncFile:close();
-    byteCount = byteCount + 1
-    if byteCount < totalNumTiles * 32 then
-        print("Success!\n" .. "File size reduced from " .. totalNumTiles * 32 .. " bytes to " .. byteCount .. " bytes!")
-    elseif byteCount == totalNumTiles * 32 then
-        print("No change!\n" .. "Raw file size and compressed file size are " .. byteCount .. " bytes!")
-    else
-        print("Uh oh!\n" .. "File size increased from " .. totalNumTiles * 32 .. " bytes to " .. byteCount .. " bytes!\n Consider exporting as raw data.")
-    end
+    byteCount = byteCount + 1 + headerSize
+    return byteCount
 end
 
 
 ----------------------------------------------------------------------------------
 -- Applies Phantasy Star RLE Compression to map data as an inc file
 ----------------------------------------------------------------------------------
-function mapCompressionIncPSRLE(mapFile, mapData, system)
+function mapCompressionIncPSRLE(mapFile, mapData, system, writeHeader)
     -- File
     local mapIncFile = io.open(mapFile, "w")
     local byteCount = 0
@@ -394,6 +396,7 @@ function mapCompressionIncPSRLE(mapFile, mapData, system)
     local currentIdenticalByte = nil                  -- Value of the Current Identical Byte in the run
     local nonIdenticalBytes = nil                    -- Array to hold the list of Non-identical byte runs
     local nonIdenticalBytesFlag = 0x80              -- Flag for Non-identical bytes
+    local headerSize = 0
     
     totalNumTiles = #mapData
 
@@ -401,6 +404,13 @@ function mapCompressionIncPSRLE(mapFile, mapData, system)
     -- Comments in INC file
     mapIncFile:write("; PSRLE Compressed Map for " .. system .. " Z80 Assembly programs\n")
     mapIncFile:write("; By Steelfinger Studios\n")
+    if writeHeader == true then
+        mapIncFile:write("; -----------------\n")
+        mapIncFile:write("; Raw Size Header" .. "\n")
+        mapIncFile:write("; -----------------\n")
+        mapIncFile:write(".DW $" .. string.format("%04X", totalNumTiles * 2) .. "\n")
+        headerSize = 2
+    end
 
     -- Go through the Attribute byte and then Index byte, one tile at a time to compress one Like-byte at a time
     for likeBytes = 1, likeByteDistance, 1 do
@@ -566,12 +576,7 @@ function mapCompressionIncPSRLE(mapFile, mapData, system)
             bitShift = 8
     end
     mapIncFile:close();
-    byteCount = byteCount + 1
-    if byteCount < totalNumTiles * 32 then
-        print("Success!\n" .. "File size reduced from " .. totalNumTiles * 32 .. " bytes to " .. byteCount .. " bytes!")
-    elseif byteCount == totalNumTiles * 32 then
-        print("No change!\n" .. "Raw file size and compressed file size are " .. byteCount .. " bytes!")
-    else
-        print("Uh oh!\n" .. "File size increased from " .. totalNumTiles * 32 .. " bytes to " .. byteCount .. " bytes!\n Consider exporting as raw data.")
-    end
+    byteCount = byteCount + 1 + headerSize
+    return byteCount
+
 end

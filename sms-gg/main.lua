@@ -116,7 +116,7 @@ local function exportSprite(sprite, slices, currentPal, img)
         if data.fileType == "inc" then
             -- Choose compression type
             if data.compression == "Phantasy Star RLE" then
-                tileCompressionIncPSRLE(data.tileFile, tilePatternTable, data.systemType)
+                tileCompressionIncPSRLE(data.tileFile, tilePatternTable, data.systemType, data.writeHeaderWord)
             else
                 writeRawSpriteTilePatternToIncFile(data.tileFile, tilePatternTable, data.systemType)
             end
@@ -128,7 +128,7 @@ local function exportSprite(sprite, slices, currentPal, img)
         elseif data.fileType == "bin" then
             -- Choose compression type
             if data.compression == "Phantasy Star RLE" then
-                tileCompressionBinPSRLE(data.tileFile, tilePatternTable)
+                tileCompressionBinPSRLE(data.tileFile, tilePatternTable, data.writeHeaderWord)
             else
                 writeRawSpriteTilePatternToBinFile(data.tileFile, tilePatternTable, data.systemType)
             end
@@ -246,12 +246,33 @@ local function exportBackground(sprite, slices, currentPal, img)
         recordTiles(x, y, numTiles, tilePatternTable, tilePatternTableHori, tilePatternTableVert, tilePatternTableHV, data.tileOffsetValue, tileMapTable, slices, img)
         -- Save the tiles to a file
         -- Write to file
+        local tileFileSize = 0
+        local mapFileSize = 0
         -- INC file
         if data.fileType == "inc" then
             -- COMPRESSION
             if data.compression == "Phantasy Star RLE" then
-                tileCompressionIncPSRLE(data.tileFile, tilePatternTable, data.systemType)
-                mapCompressionIncPSRLE(data.mapFile, tileMapTable, data.systemType)
+                tileFileSize = tileCompressionIncPSRLE(data.tileFile, tilePatternTable, data.systemType, data.writeHeaderWord)
+                mapFileSize = mapCompressionIncPSRLE(data.mapFile, tileMapTable, data.systemType, data.writeHeaderWord)
+                -- Tile File Size
+                local tileMessage
+                if tileFileSize < #tilePatternTable * 32 then
+                    tileMessage = "Success! " .. "Tile File size reduced from " .. #tilePatternTable * 32 .. " bytes to " .. tileFileSize .. " bytes!"
+                elseif tileFileSize == #tilePatternTable * 32 then
+                    tileMessage = "No change! " .. "Raw file size and compressed file size are " .. tileFileSize .. " bytes!"
+                else
+                    tileMessage = "Uh oh! " .. "File size increased from " .. #tilePatternTable * 32 .. " bytes to " .. tileFileSize .. " bytes! Consider exporting as raw data."
+                end
+                -- Map File Size
+                local mapMessage
+                if mapFileSize < #tileMapTable * 2 then
+                    mapMessage = "Success! " .. "Tile File size reduced from " .. #tileMapTable * 2 .. " bytes to " .. mapFileSize .. " bytes!"
+                elseif mapFileSize == #tileMapTable * 2 then
+                    mapMessage = "No change! " .. "Raw file size and compressed file size are " .. mapFileSize .. " bytes!"
+                else
+                    mapMessage = "Uh oh! " .. "File size increased from " .. #tileMapTable * 2 .. " bytes to " .. mapFileSize .. " bytes! Consider exporting as raw data."
+                end
+                app.alert{title="Compression Result", text={tileMessage, mapMessage}}
             else
                 writeRawTilePatternToIncFile(data.tileFile, tilePatternTable, data.systemType)
                 writeRawTileMapToIncFile(data.mapFile, tileMapTable, data.systemType)
@@ -260,10 +281,13 @@ local function exportBackground(sprite, slices, currentPal, img)
             if data.exportPalette then
                 writePaletteToIncFile(data.paletteFile, data.systemType, currentPal)
             end
+            
+
+
         -- BIN file
         elseif data.fileType == "bin" then
-            writeRawTilePatternToBinFile(data.tileFile, tilePatternTable, data.systemType)
-            writeRawTileMapToBinFile(data.mapFile, tileMapTable, data.systemType)
+            writeRawTilePatternToBinFile(data.tileFile, tilePatternTable, data.systemType, data.writeHeaderWord)
+            writeRawTileMapToBinFile(data.mapFile, tileMapTable, data.systemType, data.writeHeaderWord)
             -- Save the palette file
             if data.exportPalette then
                 writePaletteToBinFile(data.paletteFile, data.systemType, currentPal)
