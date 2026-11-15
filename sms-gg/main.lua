@@ -242,7 +242,7 @@ local function exportBackground(sprite, slices, currentPal, img)
             text="Export Palette",
             selected=false}
         dlg:check{ id="writeHeaderWord",
-            text="Write Header Word For RAW Size",
+            text="Write RAW Tile Size Header",
             enabled=true,
             selected=false}
         
