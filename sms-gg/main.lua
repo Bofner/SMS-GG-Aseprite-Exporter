@@ -170,8 +170,8 @@ end
 ----------------------------------------------------------------------------------
 local function exportBackground(sprite, slices, currentPal, img)
     -- Check size of sprite
-    if sprite.width ~= 256 or sprite.height ~= 192 then
-        app.alert("Canvas needs to be 256x192")
+    if sprite.width % 8 ~= 0 or sprite.height % 8 ~= 0 then
+        app.alert("Canvas dimensions must be a multiple of 8!")
         return
     end
 
