@@ -194,7 +194,7 @@ local function exportBackground(sprite, slices, currentPal, img)
         local function updateHeaderWord()
             local data = dlg.data
             local compression = app.fs.filePathAndTitle(data.compression)
-            if data.compression == "Phantasy Star RLE" or data.compression == "Phantasy Star RLE Row" then
+            if data.compression == "Phantasy Star RLE" then
                 dlg:modify{ id="writeHeaderWord", enabled = true }
             else
                 dlg:modify{ id="writeHeaderWord", enabled = false }
@@ -279,7 +279,7 @@ local function exportBackground(sprite, slices, currentPal, img)
             if data.compression == "Phantasy Star RLE" or data.compression == "Phantasy Star RLE Row" then
                 tileFileSize = tileCompressionIncPSRLE(data.tileFile, tilePatternTable, data.systemType, data.writeHeaderWord)
                 if data.compression == "Phantasy Star RLE Row" then
-                    mapFileSize = mapCompressionIncPSRLERow(data.mapFile, tileMapTable, data.systemType, data.writeHeaderWord, sprite)
+                    mapFileSize = mapCompressionIncPSRLERow(data.mapFile, tileMapTable, data.systemType, sprite)
                 else
                     mapFileSize = mapCompressionIncPSRLE(data.mapFile, tileMapTable, data.systemType, data.writeHeaderWord)
                 end

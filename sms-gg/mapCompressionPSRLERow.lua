@@ -14,15 +14,16 @@
 ----------------------------------------------------------------------------------
 -- Applies Phantasy Star RLE Row Compression to map data as an inc file
 ----------------------------------------------------------------------------------
-function mapCompressionIncPSRLERow(mapFile, mapData, system, writeHeader, sprite)
+function mapCompressionIncPSRLERow(mapFile, mapData, system, sprite)
     -- File
     local mapIncFile = io.open(mapFile, "w")
     local canvasWidthInTiles = sprite.width / 8
     local canvasHeightInTiles = sprite.height / 8
     local mapRowData = {canvasWidthInTiles}
     local byteSize = 0
+    local distanceToNext = 0
 
-    mapIncFile:write("; PSRLE Compressed Map for " .. system .. " Z80 Assembly programs\n")
+    mapIncFile:write("; Row PSRLE Compressed Map for " .. system .. " Z80 Assembly programs\n")
     mapIncFile:write("; By Steelfinger Studios\n")
 
     -- Write one row at a time
@@ -30,16 +31,27 @@ function mapCompressionIncPSRLERow(mapFile, mapData, system, writeHeader, sprite
         local rowBeginningIndex = ((rows - 1) * canvasWidthInTiles) + 1
         local rowEndIndex = (rowBeginningIndex + canvasWidthInTiles) - 1
         local rowArrayIndex = 1
+
         -- Create our row array
         for tile = rowBeginningIndex, rowEndIndex, 1 do
             mapRowData[rowArrayIndex] = mapData[tile]
             rowArrayIndex = rowArrayIndex + 1
         end
-        mapIncFile:write("; -----------------\n")
+        mapIncFile:write("; ===============================\n")
         mapIncFile:write("; Map Row " .. rows .. "\n")
-        mapIncFile:write("; -----------------\n")
+        mapIncFile:write("; ===============================\n")
+        if rows == canvasHeightInTiles then
+            mapIncFile:write("@StarterRow:\n")
+        end
         local rowSize = executePSRLERowCompression(mapIncFile, mapRowData, system )
-        byteSize = byteSize + rowSize
+        mapIncFile:write("; Footer Byte (Distance to start of previous row data)" .. "\n")
+        if rows ~= 1 then
+            distanceToNext = rowSize + distanceToNext   -- Distance from Footer to beginning of previous row data
+            -- Will probably need to write a separate backwards loop for games that scroll downwards...
+        end
+        mapIncFile:write(".DB $" .. string.format("%02X",distanceToNext) .. "\n")
+        distanceToNext = rowSize                    -- Overwrite offset for current location
+        byteSize = byteSize + rowSize + 1           -- 1 for the Footer Byte
     end
 
     mapIncFile:close();
@@ -68,17 +80,6 @@ function executePSRLERowCompression(mapIncFile, rowData, system)
     local headerSize = 0
     
     totalNumTiles = #rowData
-
-
-    -- Comments in INC file
-
-    if writeHeader == true then
-        mapIncFile:write("; -----------------\n")
-        mapIncFile:write("; Raw Size Header" .. "\n")
-        mapIncFile:write("; -----------------\n")
-        mapIncFile:write(".DW $" .. string.format("%04X", totalNumTiles * 2) .. "\n")
-        headerSize = 2
-    end
 
     -- Go through the Attribute byte and then Index byte, one tile at a time to compress one Like-byte at a time
     for likeBytes = 1, likeByteDistance, 1 do
