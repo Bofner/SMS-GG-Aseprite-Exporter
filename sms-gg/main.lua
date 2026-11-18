@@ -21,6 +21,7 @@ require("spriteTiles")
 require("bgTilesAndMaps")
 require("tileCompressionPSRLE")
 require("mapCompressionPSRLE")
+require("mapCompressionPSRLERow")
 
 
 
@@ -193,7 +194,7 @@ local function exportBackground(sprite, slices, currentPal, img)
         local function updateHeaderWord()
             local data = dlg.data
             local compression = app.fs.filePathAndTitle(data.compression)
-            if data.compression == "Phantasy Star RLE" then
+            if data.compression == "Phantasy Star RLE" or data.compression == "Phantasy Star RLE Row" then
                 dlg:modify{ id="writeHeaderWord", enabled = true }
             else
                 dlg:modify{ id="writeHeaderWord", enabled = false }
@@ -213,7 +214,7 @@ local function exportBackground(sprite, slices, currentPal, img)
         dlg:combobox{ id="compression",
             label="Compression Algorithm",
             option="Phantasy Star RLE",
-            options={ "Phantasy Star RLE", "Raw" },
+            options={ "Phantasy Star RLE", "Phantasy Star RLE Row",  "Raw" },
             onchange= updateHeaderWord
             }
         dlg:number{ id="tileOffsetValue", label="Tile Offset (Decimal)", text="0", value=0, min = 0, max=255}
@@ -275,9 +276,14 @@ local function exportBackground(sprite, slices, currentPal, img)
         -- INC file
         if data.fileType == "inc" then
             -- COMPRESSION
-            if data.compression == "Phantasy Star RLE" then
+            if data.compression == "Phantasy Star RLE" or data.compression == "Phantasy Star RLE Row" then
                 tileFileSize = tileCompressionIncPSRLE(data.tileFile, tilePatternTable, data.systemType, data.writeHeaderWord)
-                mapFileSize = mapCompressionIncPSRLE(data.mapFile, tileMapTable, data.systemType, data.writeHeaderWord)
+                if data.compression == "Phantasy Star RLE Row" then
+                    mapFileSize = mapCompressionIncPSRLERow(data.mapFile, tileMapTable, data.systemType, data.writeHeaderWord, sprite)
+                else
+                    mapFileSize = mapCompressionIncPSRLE(data.mapFile, tileMapTable, data.systemType, data.writeHeaderWord)
+                end
+                
                 -- Tile File Size
                 local tileMessage
                 if tileFileSize < #tilePatternTable * 32 then
