@@ -22,6 +22,7 @@ function mapCompressionIncPSRLERow(mapFile, mapData, system, sprite)
     local mapRowData = {canvasWidthInTiles}
     local byteSize = 0
     local distanceToNext = 0
+    local footerByte = 1
 
     mapIncFile:write("; Row PSRLE Compressed Map for " .. system .. " Z80 Assembly programs\n")
     mapIncFile:write("; By Steelfinger Studios\n")
@@ -50,8 +51,8 @@ function mapCompressionIncPSRLERow(mapFile, mapData, system, sprite)
             -- Will probably need to write a separate backwards loop for games that scroll downwards...
         end
         mapIncFile:write(".DB $" .. string.format("%02X",distanceToNext) .. "\n")
-        distanceToNext = rowSize                    -- Overwrite offset for current location
-        byteSize = byteSize + rowSize + 1           -- 1 for the Footer Byte
+        distanceToNext = rowSize + footerByte                   -- Overwrite offset for current location
+        byteSize = byteSize + rowSize                           -- 1 for the Footer Byte
     end
 
     mapIncFile:close();
@@ -177,6 +178,7 @@ function executePSRLERowCompression(mapIncFile, rowData, system)
                     mapIncFile:write(".DB ")
                         mapIncFile:write("$" .. string.format("%02X",runLength) .. " ")
                         mapIncFile:write("$" .. string.format("%02X",previousByte) .. "\n")
+                        byteCount = byteCount + 2
                     -- Reset variables
                     nonIdenticalBytes = nil
                     currentIdenticalByte = nil
@@ -231,11 +233,13 @@ function executePSRLERowCompression(mapIncFile, rowData, system)
             mapIncFile:write(".DB ")
             mapIncFile:write("$" .. string.format("%02X",runLength) .. " ")
             mapIncFile:write("$" .. string.format("%02X", previousByte) .. "\n")
+            byteCount = byteCount + 2
         end
         -- And the terminator byte
             mapIncFile:write("; Terminator Byte\n")
             mapIncFile:write(".DB ")
             mapIncFile:write("$" .. string.format("%02X",0) .. "\n")
+            byteCount = byteCount + 1
             -- Reset variables
             nonIdenticalBytes = nil
             currentIdenticalByte = nil
@@ -245,7 +249,7 @@ function executePSRLERowCompression(mapIncFile, rowData, system)
             bitShift = 8
     end
     
-    byteCount = byteCount + 1 + headerSize
+    byteCount = byteCount + headerSize
     return byteCount
 
 end
