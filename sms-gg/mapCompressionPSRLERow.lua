@@ -162,6 +162,7 @@ function executePSRLERowCompression(mapIncFile, rowData, system)
                         -- Reset variables
                         nonIdenticalBytes = nil
                         previousByte = testByte
+                        currentIdenticalByte = testByte
                         runLength = 2       -- We have hit an identical couple
                     end
                 
