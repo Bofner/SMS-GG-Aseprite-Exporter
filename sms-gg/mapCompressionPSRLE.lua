@@ -144,6 +144,7 @@ function mapCompressionIncPSRLE(mapFile, mapData, system, writeHeader)
                     mapIncFile:write(".DB ")
                         mapIncFile:write("$" .. string.format("%02X",runLength) .. " ")
                         mapIncFile:write("$" .. string.format("%02X",previousByte) .. "\n")
+                        byteCount = byteCount + 2
                     -- Reset variables
                     nonIdenticalBytes = nil
                     currentIdenticalByte = nil
@@ -198,11 +199,13 @@ function mapCompressionIncPSRLE(mapFile, mapData, system, writeHeader)
             mapIncFile:write(".DB ")
             mapIncFile:write("$" .. string.format("%02X",runLength) .. " ")
             mapIncFile:write("$" .. string.format("%02X", previousByte) .. "\n")
+            byteCount = byteCount + 2
         end
         -- And the terminator byte
             mapIncFile:write("; Terminator Byte\n")
             mapIncFile:write(".DB ")
             mapIncFile:write("$" .. string.format("%02X",0) .. "\n")
+            byteCount = byteCount + 1
             -- Reset variables
             nonIdenticalBytes = nil
             currentIdenticalByte = nil
@@ -212,7 +215,7 @@ function mapCompressionIncPSRLE(mapFile, mapData, system, writeHeader)
             bitShift = 8
     end
     mapIncFile:close();
-    byteCount = byteCount + 1 + headerSize
+    byteCount = byteCount + headerSize
     return byteCount
 
 end
