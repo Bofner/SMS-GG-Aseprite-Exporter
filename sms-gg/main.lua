@@ -80,6 +80,8 @@ local function graphicsExport()
     local sprite = app.activeSprite
     local tileSet = sprite.tilesets[1]
     local testTile = tileSet:tile(1)
+    local asepriteTileMap = sprite.layers[2].cels[1].image
+    print("$" .. string.format("%08X", asepriteTileMap:getPixel(19,8)))
     
     -- Slices to be used for software bits
     local slices = sprite.slices
