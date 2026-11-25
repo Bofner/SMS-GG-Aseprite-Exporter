@@ -132,8 +132,10 @@ function exportBackground(sprite, slices, currentPal, img)
         if data.fileType == "inc" then
             -- COMPRESSION
             if data.compression == "Phantasy Star RLE" or data.compression == "Phantasy Star RLE Row" then
-                tileFileSize = tileCompressionIncPSRLE(data.tileFile, tilePatternTable, data.systemType, data.writeHeaderWord)
-                if data.compression == "Phantasy Star RLE Row" then
+                if data.exportTiles then
+                    tileFileSize = tileCompressionIncPSRLE(data.tileFile, tilePatternTable, data.systemType, data.writeHeaderWord)
+                end
+                if data.compression == "Phantasy Star RLE Row" and data.exportMap then
                     mapFileSize = mapCompressionIncPSRLERow(data.mapFile, tileMapTable, data.systemType, sprite)
                 else
                     mapFileSize = mapCompressionIncPSRLE(data.mapFile, tileMapTable, data.systemType, data.writeHeaderWord)
@@ -159,7 +161,9 @@ function exportBackground(sprite, slices, currentPal, img)
                 end
                 app.alert{title="Compression Result", text={tileMessage, mapMessage}}
             else
-                writeRawTilePatternToIncFile(data.tileFile, tilePatternTable, data.systemType)
+                if data.exportTiles then
+                    writeRawTilePatternToIncFile(data.tileFile, tilePatternTable, data.systemType)
+                end
                 if data.exportMap then
                     writeRawTileMapToIncFile(data.mapFile, tileMapTable, data.systemType)
                 end
@@ -171,9 +175,16 @@ function exportBackground(sprite, slices, currentPal, img)
 
         -- BIN file
         elseif data.fileType == "bin" then
-            if data.compression == "Phantasy Star RLE" then
-                tileFileSize = tileCompressionBinPSRLE(data.tileFile, tilePatternTable, data.systemType, data.writeHeaderWord)
-                mapFileSize = mapCompressionBinPSRLE(data.mapFile, tileMapTable, data.systemType, data.writeHeaderWord)
+            if data.compression == "Phantasy Star RLE" or data.compression == "Phantasy Star RLE Row" then
+                if data.exportTiles then
+                    tileFileSize = tileCompressionBinPSRLE(data.tileFile, tilePatternTable, data.systemType, data.writeHeaderWord)
+                end
+                if data.exportMap then
+                    if data.compression == "Phantasy Star RLE Row" then
+                        app.alert("Binary Row PSRLE not yet implemented! Sorry!")
+                    end
+                    mapFileSize = mapCompressionBinPSRLE(data.mapFile, tileMapTable, data.systemType, data.writeHeaderWord)
+                end
                 -- Tile File Size
                 local tileMessage
                 if tileFileSize < #tilePatternTable * 32 then
