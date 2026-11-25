@@ -120,6 +120,7 @@ function exportBackground(sprite, slices, currentPal, img)
         local y = 0
         if data.tileSetCheck then
             recordTileSetTiles(sprite.tilesets[1], tilePatternTable, tileOffset, tileMapTable, slices)
+            recordTileMapData(data.tileOffsetValue, tileMapTable, sprite, slices)
         else
             recordTiles(x, y, numTiles, tilePatternTable, tilePatternTableHori, tilePatternTableVert, tilePatternTableHV, data.tileOffsetValue, tileMapTable, slices, img)
         end

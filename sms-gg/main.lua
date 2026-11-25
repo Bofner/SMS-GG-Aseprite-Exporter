@@ -16,15 +16,19 @@ local repeatHVTile = 0x0600
 local newTile = 0x0001
 
 -- Required files
-require("palettes")
-require("spriteTiles")
+require("recordPalettes")
+require("recordBGFromPixels")
+require("recordSpritesFromPixels")
+require("recordFromTileSet")
+
 require("exportBackground")
 require("exportSprite")
-require("bgTilesAndMaps")
-require("recordFromTileSet")
-require("tileCompressionPSRLE")
-require("mapCompressionPSRLE")
-require("mapCompressionPSRLERow")
+
+require("writeRawTileData")
+require("writeRawMapData")
+require("writePSRLETileData")
+require("writePSRLEMapData")
+require("writeRowPSRLEMapData")
 
 ----------------------------------------------------------------------------------
 -- Exports Palette Data
@@ -81,7 +85,7 @@ local function graphicsExport()
     local tileSet = sprite.tilesets[1]
     local testTile = tileSet:tile(1)
     local asepriteTileMap = sprite.layers[2].cels[1].image
-    print("$" .. string.format("%08X", asepriteTileMap:getPixel(19,8)))
+    --print("$" .. string.format("%08X", asepriteTileMap:getPixel(19,8)))
     
     -- Slices to be used for software bits
     local slices = sprite.slices
