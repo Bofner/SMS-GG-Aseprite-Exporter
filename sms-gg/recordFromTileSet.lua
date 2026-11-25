@@ -28,6 +28,8 @@ function recordTileSetTiles(tileSet, tilePatternTable)
         -- Set our baseline X and Y
         origX = 0
         origY = 0
+        currentX = 0
+        currentY = 0
         local tileBuffer = {}
         local tileCount = 1
         -- Point tile pattern to next tile
@@ -106,32 +108,12 @@ function recordTileSetTiles(tileSet, tilePatternTable)
             tileCount = tileCount + 4
 
             -- When we are out of the tile pattern pixel loop, then we've finished a row within a tile
-            if tilePattern % 32 == 0 then
-                currentX = origX
-                newRow = true
-            else
-                currentX = origX
-                newRow = false
-            end
+            currentX = 0
             -- Update our Y
             currentY = currentY + 1
         end
         -- When we finish the Tile Height loop, then we are finished with the tile
         -- Prepare for next tile
-        -- If we are at the last tile in a row, then make sure to move to the next row
-        if tilePattern % 32 == 0 then
-                newRow = true
-        end
-        if newRow == true then
-            currentY = origY + tileHeight
-            currentX = 0 
-            origX = currentX
-            origY = currentY
-            newRow = false                  -- Make sure to reset
-        else
-            currentY = origY
-            currentX = origX + tileWidth
-        end
 
         -- Save current tile
         tilePatternTable[#tilePatternTable + 1] = tileBuffer        
