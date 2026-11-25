@@ -171,7 +171,7 @@ function recordTileMapData(tileOffset, tileMapTable, sprite, slices)
     for yPos = 0, mapHeightInTiles - 1, 1 do
         for xPos = 0, mapWidthInTiles - 1, 1 do
          -- Get the tile index from asepriteTileMap, AND with tilePattern9Bit
-            local rawAsepriteTileID = asepriteTileMap:getPixel(xPos,yPos)
+            local rawAsepriteTileID = asepriteTileMap:getPixel(xPos,yPos) - 1
             local nineBitAseTileID = tilePattern9Bit & rawAsepriteTileID
         -- OR the first 9-bit into blankMapWord
             local currentMapWord = blankMapWord | nineBitAseTileID
